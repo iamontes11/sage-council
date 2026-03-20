@@ -20,7 +20,7 @@ export interface Chat {
 export interface Message {
   id: string;
   chat_id: string;
-  role: string;
+  role: "user" | "assistant";
   content: string;
   created_at: string;
 }
