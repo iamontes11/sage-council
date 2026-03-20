@@ -1,9 +1,16 @@
 import { saveTranscriptChunks } from '@/lib/supabase';
 
 export function extractVideoId(url: string): string | null {
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&
-?#]+)/);
-  return match ? match[1] : null;
+  const patterns = [
+    /[?&]v=([a-zA-Z0-9_-]{11})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /embed\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
 }
 
 export function chunkText(text: string, chunkSize: number = 1000, overlap: number = 100): string[] {
@@ -23,7 +30,7 @@ export async function ingestVideoTranscript(
   videoTitle?: string
 ): Promise<{ success: boolean; videoId: string; chunksCount: number }> {
   const videoId = extractVideoId(videoUrl);
-  if (!videoId) throw new Error("Invalid YouTube URL: " + videoUrl);
+  if (!videoId) throw new Error('Invalid YouTube URL: ' + videoUrl);
 
   const chunks = chunkText(transcript);
   const title = videoTitle || videoId;
@@ -49,7 +56,7 @@ export async function ingestMultipleVideos(
   );
 
   return results.map((r, i) => {
-    if (r.status === "fulfilled") {
+    if (r.status === 'fulfilled') {
       return { videoId: r.value.videoId, success: true };
     } else {
       return {
