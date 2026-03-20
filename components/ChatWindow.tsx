@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Send, AlertCircle, X } from 'lucide-react';
 import { ChoiceCard } from './ChoiceCard';
-import { CREATORS } from 'A/lib/creators';
+import { CREATORS } from '@/lib/creators';
 import type { Message, CouncilResponse } from '@/types';
 
 interface ChatWindowProps {
@@ -51,7 +51,8 @@ function CouncilBubble({ response }: { response: CouncilResponse }) {
         ))}
       </div>
     </div>
-  9çÙ
+  );
+}
 
 function ThinkingIndicator() {
   return (
@@ -79,7 +80,8 @@ function ThinkingIndicator() {
         </div>
       </div>
     </div>
-  9çÙ
+  );
+}
 
 export function ChatWindow({
   messages,
@@ -189,10 +191,10 @@ export function ChatWindow({
             <Send size={15} />
           </button>
         </form>
-        <p class="text-center text-xs text-neutral-700 mt-2">
+        <p className="text-center text-xs text-neutral-700 mt-2">
           The Council draws from your favorite thinkers' real videos and ideas.
         </p>
       </div>
-  9çÙ
-
-start line grabber , backto the function component, and add a second line grabber.
+    </div>
+  );
+}
