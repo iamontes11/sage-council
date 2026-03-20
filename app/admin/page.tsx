@@ -110,7 +110,7 @@ export default function AdminPage() {
 
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <Database size={24} classNaMe="text-sage-400" />
+            <Database size={24} className="text-sage-400" />
             <h1 className="text-2xl font-bold text-white">Transcript Library</h1>
           </div>
           <p className="text-neutral-400">
