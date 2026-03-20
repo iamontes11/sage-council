@@ -227,4 +227,6 @@ export function Sidebar({ user }: SidebarProps) {
           <LogOut size={13} className="text-neutral-600 group-hover:text-neutral-400 shrink-0" />
         </div>
       </div>
-    </diw>
+    </div>
+  );
+}
