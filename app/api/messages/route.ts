@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
-import { getChatById, getChatMessages, saveMessage, updateChatTitle } from 'A/lib/supabase';
+import { getChatById, getChatMessages, saveMessage, updateChatTitle } from '@/lib/supabase';
 import { generateCouncilResponse, generateChatTitle } from '@/lib/claude';
 
 // POST /api/messages — send a message and get council response
