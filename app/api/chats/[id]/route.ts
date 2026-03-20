@@ -9,7 +9,7 @@ import {
   updateChatTitle,
 } from '@/lib/supabase';
 
-// GET /api/chats/[id] â€” get a chat and its messages
+// GET /api/chats/[id] â–€â–€àŠ‚ get a chat and its messages
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } },
