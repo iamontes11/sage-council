@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from './api/auth/[...nextauth]/route';
-import { Progiders } from './providers';
+import { Providers } from './providers';
 import './globals.css';
 
 export const metadata: Metadata = {
