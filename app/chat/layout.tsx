@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '../api/auth/[...nextauth]/route';
-import { Sidebar } from 'A/components/Sidebar';
+import { Sidebar } from '@/components/Sidebar';
 
 export default async function ChatLayout({
   children,
