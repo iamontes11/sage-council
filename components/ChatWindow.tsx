@@ -145,7 +145,7 @@ export function ChatWindow({
                   {msg.role === 'user' ? (
                     <UserBubble content={msg.content as string} />
                   ) : (
-                    <CouncilBubble response={msg.content as CouncilResponse} />
+                    <CouncilBubble response={(msg.content as unknown) as CouncilResponse} />
                   )}
                 </div>
               ))}
