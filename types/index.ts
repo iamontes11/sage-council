@@ -38,4 +38,5 @@ export interface CouncilChoice {
 export interface CouncilResponse {
   choices: CouncilChoice[];
   question: string;
+  council_note?: string;
 }
