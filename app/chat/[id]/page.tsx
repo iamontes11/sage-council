@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getChatById, getChatMessages } from '@/lib/supabase';
-import ChatWindow from '@/components/ChatWindow';
+import { ChatWindow } from '@/components/ChatWindow';
 
 export default async function ChatPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -11,7 +11,7 @@ export default async function ChatPage({ params }: { params: { id: string } }) {
   }
 
   const chat = await getChatById(params.id);
-  if (!chat || chat.user_email !== session.user.email) {
+  if (!chat || chat.user_email !== session!.user!.email) {
     redirect('/chat');
   }
 
