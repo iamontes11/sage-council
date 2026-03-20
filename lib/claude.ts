@@ -9,8 +9,8 @@ const groq = new Groq({
 const MODEL = 'llama-3.3-70b-versatile';
 async function buildCreatorContexts(userMessage: string) {
   const contexts = await Promise.all(CREATORS.map(async (creator) => { try { const chunks = await searchTranscriptChunks(creator.id, userMessage, 4); return { creator, chunks }; } catch { return { creator, chunks: [] }; } })); return contexts; }
-function formatCreatorContext(creator: (typeof CREATORS)[number], chunks: Array<{ chunk_text: string; video_title: string }>): string { if (chunks.length === 0) return ''; const excerpts = chunks.map((c) => `  â¢ [${c.video_title || 'video'}] ${c.chunk_text.slice(0, 300)}...`).join('\n'); return `### ${creator.name} (${creator.tagline})\n${excerpts}`; }
-const COUNCIL_SYSTEM_PROMPT = `You are the SAGE COUNCIL â a collaborative group of 9 distinct thinkers. Produce exactly 3 distinct choices as JSON only.`;
+function formatCreatorContext(creator: (typeof CREATORS)[number], chunks: Array<{ content: string; video_title: string }>): string { if (chunks.length === 0) return ''; const excerpts = chunks.map((c) => `  Ã¢ÂÂ¢ [${c.video_title || 'video'}] ${c.content.slice(0, 300)}...`).join('\n'); return `### ${creator.name} (${creator.tagline})\n${excerpts}`; }
+const COUNCIL_SYSTEM_PROMPT = `You are the SAGE COUNCIL Ã¢ÂÂ a collaborative group of 9 distinct thinkers. Produce exactly 3 distinct choices as JSON only.`;
 export async function generateCouncilResponse(userMessage: string, chatHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []): Promise<CouncilResponse> {
   const creatorContexts = await buildCreatorContexts(userMessage);
   const contextSections = creatorContexts.map(({ creator, chunks }) => formatCreatorContext(creator, chunks)).filter(Boolean);
@@ -30,7 +30,7 @@ function buildFallbackResponse(): CouncilResponse {
       {
         creatorId: 'mark-manson',
         creatorName: 'Mark Manson',
-        emoji: '🔥',
+        emoji: 'ð¥',
         color: '#ef4444',
         title: 'Start With Radical Honesty',
         advice: 'Stop avoiding the uncomfortable truth. Real growth begins when you confront what you have been dodging.',
@@ -39,7 +39,7 @@ function buildFallbackResponse(): CouncilResponse {
       {
         creatorId: 'jay-shetty',
         creatorName: 'Jay Shetty',
-        emoji: '🧘',
+        emoji: 'ð§',
         color: '#8b5cf6',
         title: 'Let Purpose Lead',
         advice: 'Every challenge is an invitation to reconnect with your deeper why. Purpose transforms obstacles into teachers.',
@@ -48,7 +48,7 @@ function buildFallbackResponse(): CouncilResponse {
       {
         creatorId: 'sabrina-ramonov',
         creatorName: 'Sabrina Ramonov',
-        emoji: '⚡',
+        emoji: 'â¡',
         color: '#06b6d4',
         title: 'Design a System',
         advice: 'Motivation fades but systems endure. Build an environment that makes the right action the default action.',
