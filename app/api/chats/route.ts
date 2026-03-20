@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
-import { createChat, getUserChats, getArchivedChats } from 'A/lib/supabase';
+import { createChat, getUserChats, getArchivedChats } from '@/lib/supabase';
 
 // GET /api/chats — list user's chats
 export async function GET(req: NextRequest) {
