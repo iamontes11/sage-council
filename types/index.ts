@@ -26,13 +26,17 @@ export interface Message {
 }
 
 export interface CouncilChoice {
-  creatorId: string;
-  creatorName: string;
-  emoji: string;
-  color: string;
+  creatorId?: string;
+  creatorName?: string;
+  emoji?: string;
+  color?: string;
   title: string;
   advice: string;
-  actionStep: string;
+  actionStep?: string;
+  first_step?: string;
+  inspired_by?: string[];
+  tagline?: string;
+  perspective?: string;
 }
 
 export interface CouncilResponse {
