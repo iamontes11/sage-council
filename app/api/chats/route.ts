@@ -1,44 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { createChat, getUserChats, getArchivedChats } from '@/lib/supabase';
 
-// GET /api/chats — list user's chats
+// GET /api/chats - list user's chats
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const archived = req.nextUrl.searchParams.get('archived') === 'true';
-  const userId = session.user.email;
+  const { searchParams } = new URL(req.url);
+  const archived = searchParams.get('archived') === 'true';
 
-  try {
-    const chats = archived
-      ? await getArchivedChats(userId)
-      : await getUserChats(userId);
-    return NextResponse.json({ chats });
-  } catch (err) {
-    console.error('GET /api/chats error:', err);
-    return NextResponse.json({ error: 'Failed to fetch chats' }, { status: 500 });
-  }
+  const chats = archived
+    ? await getArchivedChats(session.user.email)
+    : await getUserChats(session.user.email);
+
+  return NextResponse.json({ chats });
 }
 
-// POST /api/chats — create a new chat
+// POST /api/chats - create new chat
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const title = body.title || 'New Conversation';
+  const { title } = await req.json();
 
-  try {
-    const chat = await createChat(session.user.email, title);
-    return NextResponse.json({ chat });
-  } catch (err) {
-    console.error('POST /api/chats error:', err);
-    return NextResponse.json({ error: 'Failed to create chat' }, { status: 500 });
-  }
+  const chat = await createChat({
+    user_email: session.user.email,
+    title: title || 'New Conversation',
+  });
+
+  return NextResponse.json({ chat });
 }
