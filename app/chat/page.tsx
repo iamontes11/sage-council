@@ -27,13 +27,13 @@ export default function NewChatPage() {
     'I feel stuck and uninspired. How do I reignite my motivation without forcing it?',
     "I have a big decision to make and I'm paralyzed by the options. Help me think through it.",
     'I want to build better habits but keep failing. What am I missing?',
-    'I feel like I'm living for others' expectations and not my own. How do I find my own path?',
+    'I feel like I\'m living for others\' expectations and not my own. How do I find my own path?',
     'I want to start a creative project but fear of failure keeps stopping me. What do I do?',
   ];
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 max-w-3xl mx-auto w-full">
-      { /* Header */}
+      {/* Header */}
       <div className="text-center space-y-3 mb-10">
         <div className="text-5xl">🔮</div>
         <h1 className="text-3xl font-bold text-white">
@@ -45,7 +45,7 @@ export default function NewChatPage() {
         </p>
       </div>
 
-      { /* Council preview */}
+      {/* Council preview */}
       <div className="flex flex-wrap justify-center gap-2 mb-10">
         {CREATORS.map((c) => (
           <div
@@ -76,11 +76,11 @@ export default function NewChatPage() {
         </div>
       </div>
 
-      { /* Or start fresh */ }
-   #�  <button
+      {/* Or start fresh */}
+      <button
         onClick={() => handleStart()}
         className="mt-8 text-sage-400 hover:text-sage-300 text-sm font-medium transition-colors"
-      )>
+      >
         Or start with your own question →
       </button>
     </div>
