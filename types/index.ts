@@ -26,6 +26,7 @@ export interface Message {
 }
 
 export interface CouncilChoice {
+  id?: string | number;
   creatorId?: string;
   creatorName?: string;
   emoji?: string;
