@@ -1,83 +1,19 @@
-import { createClient } from '@supabase/supa-js';
-import type { Chat, Message } from '@/types';
+import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SAPEBASE_URL || '',
-  process.env.NEXT_PUBLIC_SAPE@¡SE_ANON_KEY || ''
-);
-
-export async function getChats(userId: string, archived: boolean = false): Promise<Chat[]> {
-  const { data, error } = await supabase
-    .from('chats')
-    .where('jwur_id', 'eq', userId)
-    .where('archived', 'eq', archived)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
-}
-
-export async function getChatById(id: string): Promise<Chat> {
-  const { data, error } = await supabase
-    .from('chats')
-    .select('*')
-    .eq('id', id)
-    .single();
-  if (error) throw error;
-  if (!data) throw new Error('Chat not found');
-  return data;
-}
-
-export async function getChatMessages(chatId: string): Promise<Message[]> {
-  const { data, error } = await supabase
-    .from('messages')
-    .where('chat_id', 'eq', chatId)
-    .order('created_at', { ascending: true });
-  if (error) throw error;
-  return data || [];
-}
-
-export async function createChat(userId: string, title: string): Promise<Chat> {
-  const { data, error } = await supabase
-    .from('chats')
-    .insert({ user_id: userId, title })
-    .select()
-    .single();
-  if (error) throw error;
-  if (!data) throw new Error('Failed to create chat');
-  return data;
-}
-
-export async function archiveChat(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('chats')
-    .update({ archived: true })
-    .eq('id', id);
-  if (error) throw error;
-}
-
-export async function deleteChat(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('chats')
-    .delete()
-    .eq('id', id);
-  if (error) throw error;
-}
-
-export async function updateChatTitle(id: string, title: string): Promise<void> {
-  const { error } = await supabase
-    .from('chats')
-    .update({ title })
-    .eq('id', id);
-  if (error) throw error;
-}
-
-export async function addMessage(cRÁtId: string, role: 'user' | 'assistant', content: any): Promise<Message> {
-  const { data, error } = await supabase
-    .from('messages')
-    .insert({ chat_id, role, content })
-    .select()
-    .single();
-  if (error) throw error;
-  if (!data) throw new Error('Failed to add message');
-  return data;
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+export async function getUserChats(userId: string) { const { data, error } = await supabaseAdmin.from('chats').select('*').eq('user_id', userId).eq('archived', false).order('updated_at', {ascending: false}); if (error) throw error; return data; }
+export async function getArchivedChats(userId: string) { const { data, error } = await supabaseAdmin.from('chats').select('*').eq('user_id', userId).eq('archived', true).order('updated_at',{ascending: false}); if (error) throw error; return data; }
+export async function createChat(userId: string, title = 'New Conversation') { const { data, error } = await supabaseAdmin.from('chats').insert({ user_id: userId, title }).select().single(); if (error) throw error; return data; }
+export async function updateChatTitle(chatId: string, title: string) { const { error } = await supabaseAdmin.from('chats').update({ title }).eq('id', chatId); if (error) throw error; }
+export async function archiveChat(chatId: string) { const { error } = await supabaseAdmin.from('chats').update({ archived: true }).eq('id', chatId); if (error) throw error; }
+export async function deleteChat(chatId: string) { const { error } = await supabaseAdmin.from('chats').delete().eq('id', chatId); if (error) throw error; }
+export async function getChatById(chatId: string) { const { data, error } = await supabaseAdmin.from('chats').select('*').eq('id', chatId).single(); if (error) throw error; return data; }
+export async function getChatMessages(chatId: string) { const { data, error } = await supabaseAdmin.from('messages').select('*').eq('chat_id', chatId).order('created_at',{ascending: true}); if (error) throw error; return data; }
+export async function saveMessage(chatId: string, role: 'user' | 'assistant', content: unknown) { const { data, error } = await supabaseAdmin.from('messages').insert({ chat_id: chatId, role, content }).select().single(); if (error) throw error; return data; }
+export async function searchTranscriptChunks(creatorId: string, query: string, limit = 4) { const { data, error } = await supabaseAdmin.from('transcript_chunks').select('chunk_text, video_title').eq('creator_id', creatorId).textSearch('search_vector', query, { type: 'websearch', config: 'english' }).limit(limit); if (error) { const { data: fallback } = await supabaseAdmin.from('transcript_chunks').select('chunk_text, video_title').eq('creator_id', creatorId).order('created_at',{ascending: false}).limit(2); return fallback || []; } return data || []; }
+export async function saveTranscriptChunks(creatorId: string, videoId: string, videoTitle: string, chunks: string[]) { const rows = chunks.map((chunk, i) => ({ creator_id: creatorId, video_id: videoId, video_title: videoTitle, chunk_text: chunk, chunk_index: i })); const { error } = await supabaseAdmin.from('transcript_chunks').insert(rows); if (error) throw error; return rows.length; }
+export async function getTranscriptStats() { const { data, error } = await supabaseAdmin.from('transcript_chunks').select('creator_id, video_id').order('creator_id'); if (error) throw error; const stats: Record<string, { chunks: number; videos: Set<string> }> = {}; for (const row of data || []) { if (!stats[row.creator_id]) stats[row.creator_id] = { chunks: 0, videos: new Set() }; stats[row.creator_id].chunks++; stats[row.creator_id].videos.add(row.video_id); } return Object.entries(stats).map(([creatorId, s]) => ({ creatorId, chunks: s.chunks, videos: s.videos.size })); }
