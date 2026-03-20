@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Zap } from 'lucide-react';
-import { CREATORS } from 'A/lib/creators';
+import { CREATORS } from '@/lib/creators';
 import type { CouncilChoice } from '@/types';
 
 interface ChoiceCardProps {
@@ -13,7 +13,7 @@ interface ChoiceCardProps {
 const CARD_GRADIENTS = [
   'from-red-500/10 via-orange-500/5 to-transparent',
   'from-blue-500/10 via-indigo-500/5 to-transparent',
-  'from-green-500/10 via-teal-500.5 to-transparent',
+  'from-green-500/10 via-teal-500/5 to-transparent',
 ];
 
 const CARD_BORDERS = [
@@ -47,7 +47,7 @@ export function ChoiceCard({ choice, index }: ChoiceCardProps) {
               {CHOICE_LABELS[index]}
             </span>
             <h3 className="text-white font-bold text-base leading-snug">{choice.title}</h3>
-            { choice.tagline && (
+            {choice.tagline && (
               <p className="text-neutral-400 text-sm italic">{choice.tagline}</p>
             )}
           </div>
@@ -81,7 +81,7 @@ export function ChoiceCard({ choice, index }: ChoiceCardProps) {
           onClick={() => setExpanded(!expanded)}
           className="flex items-center gap-2 text-xs text-neutral-500 hover:text-neutral-300 transition-colors font-medium"
         >
-          { expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           {expanded ? 'Less' : 'Read full perspective'}
         </button>
       </div>
@@ -105,7 +105,7 @@ export function ChoiceCard({ choice, index }: ChoiceCardProps) {
                 <p className="text-sm font-medium">{choice.first_step}</p>
               </div>
             </div>
-          !}
+          )}
         </div>
       )}
     </div>
