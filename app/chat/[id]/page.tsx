@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ChatWindow } from '@/components/ChatWindow';
-import type { Message, CouncilResponse } from 'A/types';
+import type { Message, CouncilResponse } from '@/types';
 
 interface RawMessage {
   id: string;
@@ -17,7 +17,7 @@ function parseMessages(rawMessages: RawMessage[]): Message[] {
   return rawMessages.map((m) => ({
     ...m,
     content:
-      m.role === 'assistant&& typeof m.content === 'object' && m.content !== null
+      m.role === 'assistant' && typeof m.content === 'object' && m.content !== null
         ? (m.content as CouncilResponse)
         : typeof m.content === 'string'
         ? m.content
@@ -87,6 +87,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
       }
 
       const { userMessage, assistantMessage } = await res.json();
+
       setMessages((prev) => [
         ...prev.filter((m) => m.id !== optimisticUserMsg.id),
         {
