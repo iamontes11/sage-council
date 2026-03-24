@@ -54,14 +54,14 @@ export async function ingestVideoTranscript(
   const fullText = transcriptItems.map((item) => item.text).join(' ');
   const textChunks = chunkText(fullText, 350, 50);
 
-  const count = await saveTranscriptChunks(
+  await saveTranscriptChunks(
     creatorId,
     videoId,
     videoTitle || `Video ${videoId}`,
     textChunks,
   );
 
-  return { videoId, chunks: count };
+  return { videoId, chunks: textChunks.length };
 }
 
 /** Ingest a raw transcript string (fetched browser-side) into Supabase */
@@ -80,14 +80,14 @@ export async function ingestRawTranscript(
 
   const textChunks = chunkText(transcriptText, 350, 50);
 
-  const count = await saveTranscriptChunks(
+  await saveTranscriptChunks(
     creatorId,
     videoId,
     videoTitle || `Video ${videoId}`,
     textChunks,
   );
 
-  return { videoId, chunks: count };
+  return { videoId, chunks: textChunks.length };
 }
 
 /** Ingest multiple videos for a creator */
