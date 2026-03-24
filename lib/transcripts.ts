@@ -3,20 +3,15 @@ import { saveTranscriptChunks } from './supabase';
 
 /** Extract a YouTube video ID from a URL or raw ID */
 export function extractVideoId(input: string): string | null {
-  // Already a raw ID
   if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
 
   try {
     const url = new URL(input);
-    // youtube.com/watch?v=ID
     if (url.searchParams.get('v')) return url.searchParams.get('v');
-    // youtu.be/ID
     if (url.hostname === 'youtu.be') return url.pathname.slice(1);
-    // youtube.com/embed/ID or /shorts/ID
     const match = url.pathname.match(/\/(embed|shorts|v)\/([a-zA-Z0-9_-]{11})/);
     if (match) return match[2];
   } catch {
-    // Not a URL — try regex
     const match = input.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (match) return match[1];
   }
@@ -61,35 +56,20 @@ export async function ingestVideoTranscript(
   const fullText = transcriptItems.map((item) => item.text).join(' ');
 
   // Split into chunks
-  const chunks = chunkText(fullText, 350, 50);
+  const textChunks = chunkText(fullText, 350, 50);
+
+  // Format chunks for the deployed saveTranscriptChunks interface
+  const title = videoTitle || `Video ${videoId}`;
+  const chunkRows = textChunks.map((chunk, i) => ({
+    creator_id: creatorId,
+    video_id: videoId,
+    video_title: title,
+    chunk_index: i,
+    content: chunk,
+  }));
 
   // Save to Supabase
-  const count = await saveTranscriptChunks(
-    creatorId,
-    videoId,
-    videoTitle || `Video ${videoId}`,
-    chunks,
-  );
+  await saveTranscriptChunks(chunkRows);
 
-  return { videoId, chunks: count };
-}
-
-/** Ingest multiple videos for a creator */
-export async function ingestMultipleVideos(
-  creatorId: string,
-  videos: { url: string; title?: string }[],
-): Promise<{ success: number; failed: string[] }> {
-  let success = 0;
-  const failed: string[] = [];
-
-  for (const video of videos) {
-    try {
-      await ingestVideoTranscript(creatorId, video.url, video.title);
-      success++;
-    } catch (err) {
-      failed.push(`${video.url}: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    }
-  }
-
-  return { success, failed };
+  return { videoId, chunks: chunkRows.length };
 }
