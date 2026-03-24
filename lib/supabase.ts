@@ -98,16 +98,23 @@ export async function getChatMessages(chatId: string): Promise<Message[]> {
   return messages || [];
 }
 
-export async function saveTranscriptChunks(chunks: {
-  creator_id: string;
-  video_id: string;
-  video_title: string;
-  chunk_index: number;
-  content: string;
-}[]): Promise<void> {
+
+export async function saveTranscriptChunks(
+  creatorId: string,
+  videoId: string,
+  videoTitle: string,
+  textChunks: string[],
+): Promise<void> {
+  const rows = textChunks.map((chunk, i) => ({
+    creator_id: creatorId,
+    video_id: videoId,
+    video_title: videoTitle,
+    chunk_index: i,
+    content: chunk,
+  }));
   const { error } = await supabaseAdmin
     .from("transcript_chunks")
-    .upsert(chunks, { onConflict: "video_id,chunk_index" });
+    .upsert(rows, { onConflict: "video_id,chunk_index" });
   if (error) throw error;
 }
 
