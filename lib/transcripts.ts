@@ -1,69 +1,95 @@
-import { saveTranscriptChunks } from '@/lib/supabase';
+import { YoutubeTranscript } from 'youtube-transcript';
+import { saveTranscriptChunks } from './supabase';
 
-export function extractVideoId(url: string): string | null {
-  const patterns = [
-    /[?&]v=([a-zA-Z0-9_-]{11})/,
-    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
-    /embed\/([a-zA-Z0-9_-]{11})/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
+/** Extract a YouTube video ID from a URL or raw ID */
+export function extractVideoId(input: string): string | null {
+  // Already a raw ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+
+  try {
+    const url = new URL(input);
+    // youtube.com/watch?v=ID
+    if (url.searchParams.get('v')) return url.searchParams.get('v');
+    // youtu.be/ID
+    if (url.hostname === 'youtu.be') return url.pathname.slice(1);
+    // youtube.com/embed/ID or /shorts/ID
+    const match = url.pathname.match(/\/(embed|shorts|v)\/([a-zA-Z0-9_-]{11})/);
+    if (match) return match[2];
+  } catch {
+    // Not a URL — try regex
+    const match = input.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (match) return match[1];
   }
   return null;
 }
 
-export function chunkText(text: string, chunkSize: number = 1000, overlap: number = 100): string[] {
+/** Split text into overlapping chunks of ~maxWords words */
+export function chunkText(text: string, maxWords = 350, overlap = 50): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
   const chunks: string[] = [];
-  let i = 0;
-  while (i < text.length) {
-    chunks.push(text.slice(i, i + chunkSize));
-    i += chunkSize - overlap;
+  let start = 0;
+
+  while (start < words.length) {
+    const end = Math.min(start + maxWords, words.length);
+    chunks.push(words.slice(start, end).join(' '));
+    if (end === words.length) break;
+    start = end - overlap;
   }
+
   return chunks;
 }
 
+/** Fetch transcript for a YouTube video and ingest it into Supabase */
 export async function ingestVideoTranscript(
-  videoUrl: string,
   creatorId: string,
-  transcript: string,
-  videoTitle?: string
-): Promise<{ success: boolean; videoId: string; chunksCount: number }> {
-  const videoId = extractVideoId(videoUrl);
-  if (!videoId) throw new Error('Invalid YouTube URL: ' + videoUrl);
+  videoInput: string,
+  videoTitle?: string,
+): Promise<{ videoId: string; chunks: number }> {
+  const videoId = extractVideoId(videoInput);
+  if (!videoId) throw new Error(`Could not extract video ID from: ${videoInput}`);
 
-  const chunks = chunkText(transcript);
-  const title = videoTitle || videoId;
+  // Fetch transcript from YouTube
+  const transcriptItems = await YoutubeTranscript.fetchTranscript(videoId, {
+    lang: 'en',
+  });
 
-  await saveTranscriptChunks(
-    chunks.map((content, chunk_index) => ({
-      creator_id: creatorId,
-      video_id: videoId,
-      video_title: title,
-      chunk_index,
-      content,
-    }))
+  if (!transcriptItems || transcriptItems.length === 0) {
+    throw new Error(`No transcript available for video: ${videoId}`);
+  }
+
+  // Combine all transcript segments into one text
+  const fullText = transcriptItems.map((item) => item.text).join(' ');
+
+  // Split into chunks
+  const chunks = chunkText(fullText, 350, 50);
+
+  // Save to Supabase
+  const count = await saveTranscriptChunks(
+    creatorId,
+    videoId,
+    videoTitle || `Video ${videoId}`,
+    chunks,
   );
 
-  return { success: true, videoId, chunksCount: chunks.length };
+  return { videoId, chunks: count };
 }
 
+/** Ingest multiple videos for a creator */
 export async function ingestMultipleVideos(
-  videos: { url: string; creatorId: string; transcript: string; title?: string }[]
-): Promise<{ videoId: string; success: boolean; error?: string }[]> {
-  const results = await Promise.allSettled(
-    videos.map(v => ingestVideoTranscript(v.url, v.creatorId, v.transcript, v.title))
-  );
+  creatorId: string,
+  videos: { url: string; title?: string }[],
+): Promise<{ success: number; failed: string[] }> {
+  let success = 0;
+  const failed: string[] = [];
 
-  return results.map((r, i) => {
-    if (r.status === 'fulfilled') {
-      return { videoId: r.value.videoId, success: true };
-    } else {
-      return {
-        videoId: extractVideoId(videos[i].url) || videos[i].url,
-        success: false,
-        error: (r.reason as Error).message,
-      };
+  for (const video of videos) {
+    try {
+      await ingestVideoTranscript(creatorId, video.url, video.title);
+      success++;
+    } catch (err) {
+      failed.push(`${video.url}: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
-  });
+  }
+
+  return { success, failed };
 }
