@@ -125,3 +125,24 @@ export async function searchTranscriptChunks(
   if (error || !data) return [];
   return data;
 }
+
+export async function getTranscriptStats() {
+  const { data, error } = await supabaseAdmin
+    .from("transcript_chunks")
+    .select("creator_id, video_id");
+  if (error) throw error;
+
+  const stats: Record<string, { chunks: number; videos: Set<string> }> = {};
+  for (const row of data || []) {
+    if (!stats[row.creator_id]) {
+      stats[row.creator_id] = { chunks: 0, videos: new Set() };
+    }
+    stats[row.creator_id].chunks++;
+    stats[row.creator_id].videos.add(row.video_id);
+  }
+  return Object.entries(stats).map(([creatorId, s]) => ({
+    creatorId,
+    chunks: s.chunks,
+    videos: s.videos.size,
+  }));
+}
