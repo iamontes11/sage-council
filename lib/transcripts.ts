@@ -43,7 +43,6 @@ export async function ingestVideoTranscript(
   const videoId = extractVideoId(videoInput);
   if (!videoId) throw new Error(`Could not extract video ID from: ${videoInput}`);
 
-  // Fetch transcript from YouTube
   const transcriptItems = await YoutubeTranscript.fetchTranscript(videoId, {
     lang: 'en',
   });
@@ -52,24 +51,61 @@ export async function ingestVideoTranscript(
     throw new Error(`No transcript available for video: ${videoId}`);
   }
 
-  // Combine all transcript segments into one text
   const fullText = transcriptItems.map((item) => item.text).join(' ');
-
-  // Split into chunks
   const textChunks = chunkText(fullText, 350, 50);
 
-  // Format chunks for the deployed saveTranscriptChunks interface
-  const title = videoTitle || `Video ${videoId}`;
-  const chunkRows = textChunks.map((chunk, i) => ({
-    creator_id: creatorId,
-    video_id: videoId,
-    video_title: title,
-    chunk_index: i,
-    content: chunk,
-  }));
+  const count = await saveTranscriptChunks(
+    creatorId,
+    videoId,
+    videoTitle || `Video ${videoId}`,
+    textChunks,
+  );
 
-  // Save to Supabase
-  await saveTranscriptChunks(chunkRows);
+  return { videoId, chunks: count };
+}
 
-  return { videoId, chunks: chunkRows.length };
+/** Ingest a raw transcript string (fetched browser-side) into Supabase */
+export async function ingestRawTranscript(
+  creatorId: string,
+  videoInput: string,
+  transcriptText: string,
+  videoTitle?: string,
+): Promise<{ videoId: string; chunks: number }> {
+  const videoId = extractVideoId(videoInput);
+  if (!videoId) throw new Error(`Could not extract video ID from: ${videoInput}`);
+
+  if (!transcriptText || transcriptText.trim().length === 0) {
+    throw new Error('Transcript text is empty');
+  }
+
+  const textChunks = chunkText(transcriptText, 350, 50);
+
+  const count = await saveTranscriptChunks(
+    creatorId,
+    videoId,
+    videoTitle || `Video ${videoId}`,
+    textChunks,
+  );
+
+  return { videoId, chunks: count };
+}
+
+/** Ingest multiple videos for a creator */
+export async function ingestMultipleVideos(
+  creatorId: string,
+  videos: { url: string; title?: string }[],
+): Promise<{ success: number; failed: string[] }> {
+  let success = 0;
+  const failed: string[] = [];
+
+  for (const video of videos) {
+    try {
+      await ingestVideoTranscript(creatorId, video.url, video.title);
+      success++;
+    } catch (err) {
+      failed.push(`${video.url}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  }
+
+  return { success, failed };
 }
