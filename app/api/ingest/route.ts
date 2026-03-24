@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { ingestVideoTranscript } from '@/lib/transcripts';
+import { ingestVideoTranscript, ingestRawTranscript } from '@/lib/transcripts';
 import { getTranscriptStats } from '@/lib/supabase';
 import { CREATORS } from '@/lib/creators';
 
@@ -35,14 +35,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { creatorId: string; videoUrl: string; videoTitle?: string };
+  let body: { creatorId: string; videoUrl: string; videoTitle?: string; transcript?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { creatorId, videoUrl, videoTitle } = body;
+  const { creatorId, videoUrl, videoTitle, transcript } = body;
 
   if (!creatorId || !videoUrl) {
     return NextResponse.json(
@@ -57,7 +57,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await ingestVideoTranscript(creatorId, videoUrl, videoTitle);
+    let result;
+    if (transcript) {
+      // Use provided transcript text directly
+      result = await ingestRawTranscript(creatorId, videoUrl, transcript, videoTitle);
+    } else {
+      // Try to fetch from YouTube
+      result = await ingestVideoTranscript(creatorId, videoUrl, videoTitle);
+    }
     return NextResponse.json({
       success: true,
       videoId: result.videoId,
