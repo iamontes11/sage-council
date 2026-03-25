@@ -114,7 +114,7 @@ export async function saveTranscriptChunks(
   }));
   const { error } = await supabaseAdmin
     .from("transcript_chunks")
-    .upsert(rows, { onConflict: "video_id,chunk_index" });
+          .insert(rows);
   if (error) throw error;
 }
 
