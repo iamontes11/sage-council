@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Send, AlertCircle, X } from 'lucide-react';
 import { ChoiceCard } from './ChoiceCard';
-import { CREATORS } from '@/lib/creators';
+import CouncilThinking from './CouncilThinking';
 import type { Message, CouncilResponse } from '@/types';
 
 interface ChatWindowProps {
@@ -49,35 +49,6 @@ function CouncilBubble({ response }: { response: CouncilResponse }) {
         {response.choices?.map((choice, i) => (
           <ChoiceCard key={choice.id || i} choice={choice} index={i} />
         ))}
-      </div>
-    </div>
-  );
-}
-
-function ThinkingIndicator() {
-  return (
-    <div className="flex items-start gap-3 animate-fade-in">
-      <div className="text-2xl">🔮</div>
-      <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
-        <div className="flex items-center gap-1.5">
-          <div className="flex gap-1">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="w-1.5 h-1.5 bg-sage-400 rounded-full typing-dot"
-                style={{ animationDelay: `${i * 0.2}s` }}
-              />
-            ))}
-          </div>
-          <span className="text-xs text-neutral-500 ml-1">Council is deliberating...</span>
-        </div>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {CREATORS.map((c) => (
-            <span key={c.id} className="text-xs text-neutral-600">
-              {c.emoji}
-            </span>
-          ))}
-        </div>
       </div>
     </div>
   );
@@ -149,7 +120,7 @@ export function ChatWindow({
                   )}
                 </div>
               ))}
-              {thinking && <ThinkingIndicator />}
+              {thinking && <CouncilThinking />}
             </>
           )}
           <div ref={bottomRef} />
