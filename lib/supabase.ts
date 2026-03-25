@@ -110,7 +110,7 @@ export async function saveTranscriptChunks(
     video_id: videoId,
     video_title: videoTitle,
     chunk_index: i,
-    content: chunk,
+    chunk_text: chunk,
   }));
   const { error } = await supabaseAdmin
     .from("transcript_chunks")
