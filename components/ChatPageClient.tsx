@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ChatWindow } from '@/components/ChatWindow';
-import type { Message } from '@/types';
+import type { Message, CouncilResponse } from '@/types';
 
 interface ChatPageClientProps {
   chatId: string;
@@ -44,11 +44,15 @@ export function ChatPageClient({ chatId, initialMessages }: ChatPageClientProps)
       }
 
       const data = await res.json();
+      // API returns { userMessage, assistantMessage, councilResponse }
+      // councilResponse is the parsed CouncilResponse object
+      const councilResponse = data.councilResponse as CouncilResponse;
+
       const assistantMsg: Message = {
-        id: data.id || (Date.now() + 1).toString(),
+        id: data.assistantMessage?.id || (Date.now() + 1).toString(),
         chat_id: chatId,
         role: 'assistant',
-        content: data.content,
+        content: councilResponse,
         created_at: new Date().toISOString(),
       };
 
@@ -71,4 +75,4 @@ export function ChatPageClient({ chatId, initialMessages }: ChatPageClientProps)
       onClearError={() => setError(null)}
     />
   );
-}
+    }
