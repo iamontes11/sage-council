@@ -1,19 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChatWindow } from '@/components/ChatWindow';
 import type { Message, CouncilResponse } from '@/types';
 
 interface ChatPageClientProps {
   chatId: string;
   initialMessages: Message[];
+  starter?: string;
 }
 
-export function ChatPageClient({ chatId, initialMessages }: ChatPageClientProps) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+function parseMessages(msgs: Message[]): Message[] {
+  return msgs.map((msg) => {
+    if (msg.role === 'assistant' && typeof msg.content === 'string') {
+      try {
+        return { ...msg, content: JSON.parse(msg.content) as CouncilResponse };
+      } catch {
+        return msg;
+      }
+    }
+    return msg;
+  });
+}
+
+export function ChatPageClient({ chatId, initialMessages, starter }: ChatPageClientProps) {
+  const [messages, setMessages] = useState<Message[]>(parseMessages(initialMessages));
   const [loading, setLoading] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const starterSent = useRef(false);
 
   async function handleSend(input: string) {
     if (!input.trim() || loading) return;
@@ -26,7 +41,7 @@ export function ChatPageClient({ chatId, initialMessages }: ChatPageClientProps)
       created_at: new Date().toISOString(),
     };
 
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
     setThinking(true);
     setError(null);
@@ -45,7 +60,6 @@ export function ChatPageClient({ chatId, initialMessages }: ChatPageClientProps)
 
       const data = await res.json();
       // API returns { userMessage, assistantMessage, councilResponse }
-      // councilResponse is the parsed CouncilResponse object
       const councilResponse = data.councilResponse as CouncilResponse;
 
       const assistantMsg: Message = {
@@ -56,7 +70,7 @@ export function ChatPageClient({ chatId, initialMessages }: ChatPageClientProps)
         created_at: new Date().toISOString(),
       };
 
-      setMessages(prev => [...prev, assistantMsg]);
+      setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -64,6 +78,15 @@ export function ChatPageClient({ chatId, initialMessages }: ChatPageClientProps)
       setThinking(false);
     }
   }
+
+  // Auto-send starter message from prompt shortcut
+  useEffect(() => {
+    if (starter && !starterSent.current) {
+      starterSent.current = true;
+      handleSend(starter);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <ChatWindow
@@ -75,4 +98,4 @@ export function ChatPageClient({ chatId, initialMessages }: ChatPageClientProps)
       onClearError={() => setError(null)}
     />
   );
-    }
+         }
