@@ -4,7 +4,13 @@ import { redirect } from 'next/navigation';
 import { getChatById, getChatMessages } from '@/lib/supabase';
 import { ChatPageClient } from '@/components/ChatPageClient';
 
-export default async function ChatPage({ params }: { params: { id: string } }) {
+export default async function ChatPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { starter?: string };
+}) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     redirect('/');
@@ -17,5 +23,11 @@ export default async function ChatPage({ params }: { params: { id: string } }) {
 
   const messages = await getChatMessages(params.id);
 
-  return <ChatPageClient chatId={params.id} initialMessages={messages} />;
+  return (
+    <ChatPageClient
+      chatId={params.id}
+      initialMessages={messages}
+      starter={searchParams.starter}
+    />
+  );
 }
