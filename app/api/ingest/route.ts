@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       message: `Successfully ingested ${result.chunks} chunks for ${creator.name}`,
     });
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    const errorMessage = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'message' in err ? String((err as any).message) : JSON.stringify(err));
     console.error('Ingest error:', errorMessage);
     return NextResponse.json(
       { error: `Ingestion failed: ${errorMessage}` },
