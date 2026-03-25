@@ -43,6 +43,7 @@ export interface CouncilChoice {
 export interface CouncilResponse {
   choices: CouncilChoice[];
   council_note?: string;
+  question?: string;
 }
 
 export interface ChatWithLastMessage extends Chat {
