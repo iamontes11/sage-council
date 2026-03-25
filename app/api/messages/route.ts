@@ -30,8 +30,14 @@ export async function POST(req: NextRequest) {
   // Get conversation history
   const history = await getChatMessages(chatId);
 
+  // Map history to string content for the AI (DB stores assistant content as JSON strings)
+  const historyMessages = history.map((m) => ({
+    role: m.role as 'user' | 'assistant',
+    content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+  }));
+
   // Generate council response
-  const councilResponse = await generateCouncilResponse(content, history);
+  const councilResponse = await generateCouncilResponse(content, historyMessages);
 
   // Save assistant message
   const assistantMessage = await saveMessage({
