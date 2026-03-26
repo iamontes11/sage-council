@@ -39,9 +39,7 @@ ${text}`);
       // framework context is optional; continue silently
     }
   }
-  return sections.length > 0 ? sections.join('
-
-') : '';
+  return sections.length > 0 ? sections.join('\n\n') : '';
 }
 
 function formatCreatorContext(
@@ -94,9 +92,7 @@ export async function generateCouncilResponse(
     contextSections.length > 0
       ? `## TRANSCRIPT WISDOM
 
-${contextSections.join('
-
-')}`
+${contextSections.join('\n\n')}`
       : '## No transcripts yet — draw on your deep knowledge of each thinker.';
 
   const frameworkBlock =
