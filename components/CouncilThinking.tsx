@@ -1,312 +1,521 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CREATORS } from '@/lib/creators';
 
-const PHRASES = [
-  'The Council deliberates…',
-  'Consulting ancient wisdom…',
-  'Seeking the truth…',
-  'Weighing your words…',
-  'The round table speaks…',
-  'Wisdom converges…',
+type Mode = 'idle' | 'thinking' | 'responding';
+
+interface Props {
+  mode?: Mode;
+  thinking?: boolean; // backwards compat â true maps to 'thinking'
+}
+
+// âââ Pixel palette âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+const WOOD   = '#8B5E3C';
+const STONE  = '#6B7280';
+const FLOOR  = '#2D2A24';
+const FLOOR2 = '#252220';
+const TABLE  = '#5C3D1E';
+const TABLE_EDGE = '#3D2710';
+const FELT   = '#1A3A2A';
+const GOLD   = '#C9A84C';
+const TORCH  = '#FF8C00';
+const TORCH2 = '#FFD700';
+const WALL   = '#1C1917';
+const WALL2  = '#1A1714';
+const CANDLE = '#FFFDE7';
+
+// Agent colours (one per creator, cycling)
+const AGENT_COLORS = [
+  '#7C3AED','#0891B2','#059669','#D97706','#DC2626',
+  '#7C3AED','#2563EB','#10B981','#F59E0B','#EF4444',
+  '#8B5CF6','#06B6D4',
 ];
 
-export default function CouncilThinking() {
-  const [speakingIdx, setSpeakingIdx] = useState(0);
-  const [phraseIdx, setPhraseIdx] = useState(0);
-  const [tick, setTick] = useState(0);
+const W = 340, H = 340;
+const CX = 170, CY = 185;
+const TABLE_R = 72;
+const ROOM_PAD = 28;
+
+// âââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
+function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
+function rnd(lo: number, hi: number) { return lo + Math.random() * (hi - lo); }
+function dist(ax: number, ay: number, bx: number, by: number) {
+  return Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2);
+}
+
+// âââ Build seat positions around the table ââââââââââââââââââââââââââââââââââââ
+function buildSeats(n: number) {
+  return Array.from({ length: n }, (_, i) => {
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    return { x: CX + Math.cos(a) * (TABLE_R + 14), y: CY + Math.sin(a) * (TABLE_R + 14) };
+  });
+}
+
+// âââ Agent state ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+interface Agent {
+  x: number; y: number;       // current position
+  tx: number; ty: number;     // target position (wander)
+  sx: number; sy: number;     // seat position
+  vx: number; vy: number;     // velocity
+  color: string;
+  emoji: string;
+  name: string;
+  phase: number;              // animation phase offset
+  workPhase: number;          // working anim offset
+  blinkT: number;             // blink timer
+  seated: boolean;
+  bobY: number;               // bob offset
+  dotPhase: number;           // thinking dots phase
+}
+
+function buildAgents(creators: typeof CREATORS): Agent[] {
+  const seats = buildSeats(creators.length);
+  return creators.map((c, i) => {
+    const angle = rnd(0, Math.PI * 2);
+    const r = rnd(TABLE_R + 30, 120);
+    const x = clamp(CX + Math.cos(angle) * r, ROOM_PAD + 8, W - ROOM_PAD - 8);
+    const y = clamp(CY + Math.sin(angle) * r, ROOM_PAD + 8, H - ROOM_PAD - 8);
+    return {
+      x, y, tx: x, ty: y,
+      sx: seats[i].x, sy: seats[i].y,
+      vx: 0, vy: 0,
+      color: AGENT_COLORS[i % AGENT_COLORS.length],
+      emoji: c.emoji || 'ð¤',
+      name: c.name,
+      phase: rnd(0, Math.PI * 2),
+      workPhase: rnd(0, Math.PI * 2),
+      blinkT: rnd(0, 4000),
+      seated: false,
+      bobY: 0,
+      dotPhase: rnd(0, Math.PI * 2),
+    };
+  });
+}
+
+// âââ Component ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+export default function CouncilThinking({ mode, thinking }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const agentsRef = useRef<Agent[]>([]);
+  const rafRef    = useRef<number>(0);
+  const t0Ref     = useRef<number>(0);
+  const modeRef   = useRef<Mode>('idle');
+
+  // Resolve effective mode
+  const effectiveMode: Mode = mode ?? (thinking ? 'thinking' : 'idle');
+
+  // Sync mode ref so animation loop sees it without re-creating
+  useEffect(() => { modeRef.current = effectiveMode; }, [effectiveMode]);
+
+  // Current phrase for bottom label
+  const [label, setLabel] = useState('');
+  const labelRef = useRef('');
+
+  const IDLE_PHRASES   = ['Gathering knowledgeâ¦','Surveying the realmâ¦','Awaiting consultationâ¦','Studying the archivesâ¦','In councilâ¦'];
+  const THINK_PHRASES  = ['Deliberatingâ¦','Cross-referencing sourcesâ¦','Synthesising perspectivesâ¦','Running deep analysisâ¦','Consulting the scrollsâ¦'];
+  const RESP_PHRASES   = ['Formulating responseâ¦','Drafting the council's answerâ¦','Presenting findingsâ¦','Sharing expert viewsâ¦','Delivering insightâ¦'];
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setSpeakingIdx((prev) => (prev + 1) % CREATORS.length);
-      setTick((t) => t + 1);
-    }, 900);
-    return () => clearInterval(interval);
-  }, []);
+    const pool = effectiveMode === 'thinking' ? THINK_PHRASES
+               : effectiveMode === 'responding' ? RESP_PHRASES
+               : IDLE_PHRASES;
+    const pick = () => {
+      const p = pool[Math.floor(Math.random() * pool.length)];
+      labelRef.current = p;
+      setLabel(p);
+    };
+    pick();
+    const id = setInterval(pick, 3200);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveMode]);
 
   useEffect(() => {
-    const pi = setInterval(() => {
-      setPhraseIdx((p) => (p + 1) % PHRASES.length);
-    }, 2700);
-    return () => clearInterval(pi);
-  }, []);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
 
-  const cx = 170;
-  const cy = 170;
-  const tableR = 80;
-  const charR = 120;
-  const n = CREATORS.length;
+    // Init agents once
+    if (agentsRef.current.length === 0) {
+      agentsRef.current = buildAgents(CREATORS);
+    }
+    const agents = agentsRef.current;
+    t0Ref.current = performance.now();
+
+    // ââ Torch positions (corners) ââ
+    const torches = [
+      { x: ROOM_PAD + 6, y: ROOM_PAD + 6 },
+      { x: W - ROOM_PAD - 6, y: ROOM_PAD + 6 },
+      { x: ROOM_PAD + 6, y: H - ROOM_PAD - 6 },
+      { x: W - ROOM_PAD - 6, y: H - ROOM_PAD - 6 },
+    ];
+
+    // ââ Particle pool ââ
+    const particles: { x:number; y:number; vx:number; vy:number; life:number; maxLife:number; color:string }[] = [];
+
+    function spawnParticle(x: number, y: number, color: string) {
+      if (particles.length > 60) return;
+      particles.push({
+        x, y,
+        vx: rnd(-0.6, 0.6),
+        vy: rnd(-1.2, -0.3),
+        life: 1,
+        maxLife: rnd(30, 70),
+        color,
+      });
+    }
+
+    // ââ Drawing helpers ââ
+    function drawRoom() {
+      // Floor checkerboard (subtle)
+      const tileW = 20;
+      for (let gy = 0; gy * tileW < H; gy++) {
+        for (let gx = 0; gx * tileW < W; gx++) {
+          ctx.fillStyle = (gx + gy) % 2 === 0 ? FLOOR : FLOOR2;
+          ctx.fillRect(gx * tileW, gy * tileW, tileW, tileW);
+        }
+      }
+      // Walls (border)
+      ctx.fillStyle = WALL;
+      ctx.fillRect(0, 0, W, ROOM_PAD);
+      ctx.fillRect(0, H - ROOM_PAD, W, ROOM_PAD);
+      ctx.fillRect(0, 0, ROOM_PAD, H);
+      ctx.fillRect(W - ROOM_PAD, 0, ROOM_PAD, H);
+      // Wall highlights
+      ctx.fillStyle = WALL2;
+      ctx.fillRect(ROOM_PAD, ROOM_PAD, W - ROOM_PAD * 2, 2);
+      ctx.fillRect(ROOM_PAD, H - ROOM_PAD - 2, W - ROOM_PAD * 2, 2);
+      ctx.fillRect(ROOM_PAD, ROOM_PAD, 2, H - ROOM_PAD * 2);
+      ctx.fillRect(W - ROOM_PAD - 2, ROOM_PAD, 2, H - ROOM_PAD * 2);
+    }
+
+    function drawTorch(tx: number, ty: number, t: number) {
+      // bracket
+      ctx.fillStyle = STONE;
+      ctx.fillRect(tx - 3, ty + 2, 6, 5);
+      ctx.fillStyle = WOOD;
+      ctx.fillRect(tx - 1, ty - 4, 3, 8);
+
+      // flicker
+      const flk = 0.7 + 0.3 * Math.sin(t * 8 + tx);
+      const size = 6 * flk;
+
+      // glow
+      const g = ctx.createRadialGradient(tx, ty - 6, 0, tx, ty - 6, 18 * flk);
+      g.addColorStop(0, `rgba(255,180,0,${0.25 * flk})`);
+      g.addColorStop(1, 'rgba(255,120,0,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(tx, ty - 6, 18 * flk, 0, Math.PI * 2);
+      ctx.fill();
+
+      // flame body
+      ctx.fillStyle = TORCH;
+      ctx.beginPath();
+      ctx.ellipse(tx, ty - 4, size * 0.5, size, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = TORCH2;
+      ctx.beginPath();
+      ctx.ellipse(tx, ty - 2, size * 0.25, size * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = CANDLE;
+      ctx.beginPath();
+      ctx.arc(tx, ty - 1, size * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+
+      // emit particles occasionally
+      if (Math.random() < 0.15) spawnParticle(tx + rnd(-2, 2), ty - 8, TORCH);
+    }
+
+    function drawTable(t: number) {
+      // Shadow
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(CX + 6, CY + 10, TABLE_R + 4, (TABLE_R + 4) * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Glow under table (consulting mode)
+      if (modeRef.current !== 'idle') {
+        const pulse = 0.5 + 0.5 * Math.sin(t * 2.5);
+        const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, TABLE_R + 20);
+        g.addColorStop(0, `rgba(100,200,120,${0.12 * pulse})`);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.ellipse(CX, CY, TABLE_R + 20, (TABLE_R + 20) * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Table edge
+      ctx.fillStyle = TABLE_EDGE;
+      ctx.beginPath();
+      ctx.ellipse(CX, CY + 6, TABLE_R + 2, (TABLE_R + 2) * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Table top
+      ctx.fillStyle = TABLE;
+      ctx.beginPath();
+      ctx.ellipse(CX, CY, TABLE_R, TABLE_R * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Felt surface
+      ctx.fillStyle = FELT;
+      ctx.beginPath();
+      ctx.ellipse(CX, CY, TABLE_R - 8, (TABLE_R - 8) * 0.52, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Gold trim
+      ctx.strokeStyle = GOLD;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(CX, CY, TABLE_R - 8, (TABLE_R - 8) * 0.52, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Candle in centre
+      const candleFlk = 0.8 + 0.2 * Math.sin(t * 6);
+      ctx.fillStyle = '#D4B896';
+      ctx.fillRect(CX - 2, CY - 12, 4, 12);
+      ctx.fillStyle = TORCH;
+      ctx.beginPath();
+      ctx.ellipse(CX, CY - 14, 3 * candleFlk, 5 * candleFlk, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = CANDLE;
+      ctx.beginPath();
+      ctx.arc(CX, CY - 12, 1.5 * candleFlk, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glow around candle
+      const cg = ctx.createRadialGradient(CX, CY - 12, 0, CX, CY - 12, 24 * candleFlk);
+      cg.addColorStop(0, `rgba(255,220,100,${0.15 * candleFlk})`);
+      cg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = cg;
+      ctx.beginPath();
+      ctx.arc(CX, CY - 12, 24 * candleFlk, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Papers/scrolls on table
+      const scrolls = [[-20, 8],[18, -5],[2, 16],[-12, -12]];
+      for (const [sx, sy] of scrolls) {
+        ctx.fillStyle = 'rgba(235,220,180,0.6)';
+        ctx.save();
+        ctx.translate(CX + sx, CY + sy * 0.55);
+        ctx.rotate(sx * 0.04);
+        ctx.fillRect(-5, -3, 10, 6);
+        ctx.strokeStyle = 'rgba(160,120,60,0.4)';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(-5, -3, 10, 6);
+        ctx.restore();
+      }
+    }
+
+    function drawAgent(a: Agent, t: number) {
+      const { x, y, color, emoji, phase, seated, workPhase, blinkT, dotPhase } = a;
+      const bob = seated ? Math.sin(t * 1.5 + workPhase) * 1.5 : Math.sin(t * 2 + phase) * 2.5;
+      const ry = y + bob;
+
+      // Shadow
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(x, ry + 10, 8, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Body
+      const bodyH = 14;
+      const bodyW = 12;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(x - bodyW / 2, ry - bodyH / 2, bodyW, bodyH, 4);
+      ctx.fill();
+
+      // Darker overlay bottom half (robe)
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath();
+      ctx.roundRect(x - bodyW / 2, ry, bodyW, bodyH / 2, [0, 0, 4, 4]);
+      ctx.fill();
+
+      // Head
+      ctx.fillStyle = '#F5CBA7';
+      ctx.beginPath();
+      ctx.arc(x, ry - bodyH / 2 - 5, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eyes (blink)
+      const blink = ((t * 1000 + blinkT) % 4000) < 150;
+      const eyeH = blink ? 0.5 : 2;
+      ctx.fillStyle = '#2D1B00';
+      ctx.fillRect(x - 3, ry - bodyH / 2 - 7, 1.5, eyeH);
+      ctx.fillRect(x + 1.5, ry - bodyH / 2 - 7, 1.5, eyeH);
+
+      // Emoji badge
+      ctx.font = '8px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(emoji, x, ry - bodyH / 2 - 5);
+
+      // Working anim (seated + active mode)
+      if (seated && modeRef.current !== 'idle') {
+        // Arms writing
+        const armAngle = Math.sin(t * 3 + workPhase) * 0.4;
+        ctx.strokeStyle = '#F5CBA7';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - 4, ry - 2);
+        ctx.lineTo(x - 4 + Math.cos(armAngle) * 8, ry + Math.sin(armAngle) * 4);
+        ctx.stroke();
+      }
+
+      // Thinking dots (thinking mode only)
+      if (modeRef.current === 'thinking') {
+        const dotCount = 3;
+        for (let d = 0; d < dotCount; d++) {
+          const dPhase = (t * 4 + dotPhase + d * 0.6) % (Math.PI * 2);
+          const dotY   = ry - bodyH / 2 - 16 - Math.abs(Math.sin(dPhase)) * 5;
+          const alpha  = 0.4 + 0.6 * Math.abs(Math.sin(dPhase));
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(x - 4 + d * 4, dotY, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      // Name label (when idle or consulting â show briefly)
+      // Not rendered to keep scene clean; emoji is the identity marker
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x  += p.vx;
+        p.y  += p.vy;
+        p.vy *= 0.98;
+        p.life -= 1 / p.maxLife;
+        if (p.life <= 0) { particles.splice(i, 1); continue; }
+        ctx.globalAlpha = p.life * 0.7;
+        ctx.fillStyle   = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 1.5 * p.life, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // ââ Agent movement ââ
+    function updateAgents(t: number, dt: number) {
+      const m = modeRef.current;
+      const speed = m === 'idle' ? 0.6 : 0;
+      const seatLerp = m !== 'idle' ? 0.04 : 0.008;
+
+      for (const a of agents) {
+        if (m !== 'idle') {
+          // Move toward seat
+          a.x = lerp(a.x, a.sx, seatLerp);
+          a.y = lerp(a.y, a.sy, seatLerp);
+          a.seated = dist(a.x, a.y, a.sx, a.sy) < 8;
+          // Reset wander target to current pos so it starts from seat when going idle
+          a.tx = a.x; a.ty = a.y;
+        } else {
+          a.seated = false;
+          // Wander
+          if (dist(a.x, a.y, a.tx, a.ty) < 5) {
+            // Pick new target
+            const angle = rnd(0, Math.PI * 2);
+            const r     = rnd(30, 120);
+            a.tx = clamp(CX + Math.cos(angle) * r, ROOM_PAD + 12, W - ROOM_PAD - 12);
+            a.ty = clamp(CY + Math.sin(angle) * r, ROOM_PAD + 12, H - ROOM_PAD - 12);
+          }
+          const dx = a.tx - a.x;
+          const dy = a.ty - a.y;
+          const d  = Math.sqrt(dx * dx + dy * dy);
+          if (d > 1) {
+            a.vx = lerp(a.vx, (dx / d) * speed, 0.08);
+            a.vy = lerp(a.vy, (dy / d) * speed, 0.08);
+          }
+          // Collision avoidance with table
+          const td = dist(a.x + a.vx, a.y + a.vy, CX, CY);
+          if (td < TABLE_R + 16) {
+            const ang = Math.atan2(a.y - CY, a.x - CX);
+            a.vx += Math.cos(ang) * 0.5;
+            a.vy += Math.sin(ang) * 0.5;
+          }
+          a.x += a.vx;
+          a.y += a.vy;
+          a.x  = clamp(a.x, ROOM_PAD + 10, W - ROOM_PAD - 10);
+          a.y  = clamp(a.y, ROOM_PAD + 10, H - ROOM_PAD - 10);
+        }
+      }
+    }
+
+    // ââ Main loop ââ
+    let prev = performance.now();
+    function frame(now: number) {
+      const dt = (now - prev) / 1000;
+      prev = now;
+      const t  = (now - t0Ref.current) / 1000;
+
+      ctx.clearRect(0, 0, W, H);
+
+      drawRoom();
+
+      // Torch fire
+      for (const tr of torches) drawTorch(tr.x, tr.y, t);
+
+      // Particles over torches (under table so they don't overlay agents)
+      updateParticles();
+
+      drawTable(t);
+
+      // Sort agents by Y so front ones draw over back ones
+      const sorted = [...agents].sort((a, b) => a.y - b.y);
+      for (const a of sorted) drawAgent(a, t);
+
+      updateAgents(t, dt);
+
+      rafRef.current = requestAnimationFrame(frame);
+    }
+
+    rafRef.current = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(rafRef.current);
+  // Only run once â mode changes are handled via modeRef
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="flex flex-col items-center gap-3 py-4 animate-fade-in">
-      <svg
-        width="340"
-        height="340"
-        viewBox="0 0 340 340"
-        style={{ imageRendering: 'pixelated' }}
-        className="drop-shadow-xl"
+    <div className="flex flex-col items-center gap-2">
+      <div
+        className="relative rounded-xl overflow-hidden border border-stone-700/60 shadow-2xl"
+        style={{ background: '#1C1917' }}
       >
-        <defs>
-          <radialGradient id="floorGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#2a1a0e" />
-            <stop offset="100%" stopColor="#0d0906" />
-          </radialGradient>
-          <radialGradient id="tableGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#4a3020" />
-            <stop offset="100%" stopColor="#2a1a0e" />
-          </radialGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        {/* Stone floor */}
-        <rect width="340" height="340" fill="url(#floorGrad)" rx="8" />
-        {Array.from({ length: 8 }).map((_, row) =>
-          Array.from({ length: 8 }).map((_, col) => (
-            <rect
-              key={`tile-${row}-${col}`}
-              x={col * 43}
-              y={row * 43}
-              width="41"
-              height="41"
-              fill="none"
-              stroke="#1a0f08"
-              strokeWidth="1"
-              opacity="0.4"
-            />
-          ))
-        )}
-
-        {/* 4 stone pillars */}
-        {[
-          { x: 30, y: 30 }, { x: 298, y: 30 },
-          { x: 30, y: 298 }, { x: 298, y: 298 },
-        ].map((p, i) => (
-          <g key={`pillar-${i}`}>
-            <rect x={p.x - 10} y={p.y - 10} width="20" height="20" fill="#3a2a1a" stroke="#6a4a2a" strokeWidth="1" />
-            <rect x={p.x - 8} y={p.y - 8} width="16" height="16" fill="#2a1a0e" stroke="#8a6a3a" strokeWidth="0.5" />
-          </g>
-        ))}
-
-        {/* 4 torches between pillars */}
-        {[
-          { x: 170, y: 18 }, { x: 170, y: 322 },
-          { x: 18, y: 170 }, { x: 322, y: 170 },
-        ].map((t, i) => {
-          const flicker = (tick + i) % 3;
-          return (
-            <g key={`torch-${i}`} filter="url(#glow)">
-              <rect x={t.x - 3} y={t.y} width="6" height="10" fill="#6a4a2a" />
-              <ellipse
-                cx={t.x}
-                cy={t.y - 4}
-                rx={flicker === 0 ? 5 : flicker === 1 ? 4 : 6}
-                ry={flicker === 0 ? 7 : flicker === 1 ? 6 : 8}
-                fill={flicker === 0 ? '#ff9900' : flicker === 1 ? '#ffcc00' : '#ff6600'}
-                opacity="0.9"
-              />
-              <ellipse cx={t.x} cy={t.y - 6} rx="2" ry="3" fill="#ffffff" opacity="0.4" />
-            </g>
-          );
-        })}
-
-        {/* Round table */}
-        <circle cx={cx} cy={cy} r={tableR + 6} fill="#1a0f08" opacity="0.8" />
-        <circle cx={cx} cy={cy} r={tableR + 4} fill="#3a2010" stroke="#6a3a10" strokeWidth="2" />
-        <circle cx={cx} cy={cy} r={tableR} fill="url(#tableGrad)" stroke="#8a5a20" strokeWidth="1.5" />
-
-        {/* Table grain lines */}
-        {[-20, 0, 20].map((offset, i) => (
-          <line
-            key={`grain-${i}`}
-            x1={cx - tableR + 10}
-            y1={cy + offset}
-            x2={cx + tableR - 10}
-            y2={cy + offset}
-            stroke="#5a3a18"
-            strokeWidth="0.5"
-            opacity="0.4"
-          />
-        ))}
-
-        {/* Crystal ball at center */}
-        <circle cx={cx} cy={cy} r="14" fill="#1a0a3a" stroke="#6a4aaa" strokeWidth="1.5" filter="url(#glow)" />
-        <circle cx={cx} cy={cy} r="12" fill="#2a1a5a" opacity="0.9" />
-        <ellipse cx={cx - 4} cy={cy - 4} rx="4" ry="3" fill="#8a6acc" opacity="0.6" />
-        <circle cx={cx - 3} cy={cy - 5} r="2" fill="white" opacity="0.3" />
-        {/* Pulse ring */}
-        <circle
-          cx={cx}
-          cy={cy}
-          r={14 + (tick % 3) * 4}
-          fill="none"
-          stroke="#8a6acc"
-          strokeWidth="0.8"
-          opacity={0.6 - (tick % 3) * 0.2}
-        />
-
-        {/* Council members */}
-        {CREATORS.map((creator, i) => {
-          const angle = (i / n) * 2 * Math.PI - Math.PI / 2;
-          const px = cx + charR * Math.cos(angle);
-          const py = cy + charR * Math.sin(angle);
-          const isSpeaking = i === speakingIdx;
-          const headColor = creator.color;
-
-          return (
-            <g key={creator.id} style={{ transition: 'transform 0.3s' }}>
-              {/* Glow ring when speaking */}
-              {isSpeaking && (
-                <circle
-                  cx={px}
-                  cy={py}
-                  r="14"
-                  fill="none"
-                  stroke={headColor}
-                  strokeWidth="2"
-                  opacity="0.8"
-                  filter="url(#glow)"
-                />
-              )}
-
-              {/* Body / robe */}
-              <rect
-                x={px - 5}
-                y={py + 7}
-                width="10"
-                height="12"
-                fill="#1a1a2a"
-                stroke="#2a2a3a"
-                strokeWidth="0.5"
-              />
-              {/* Robe bottom flare */}
-              <polygon
-                points={`${px - 7},${py + 19} ${px + 7},${py + 19} ${px + 5},${py + 7} ${px - 5},${py + 7}`}
-                fill="#1a1a2a"
-                stroke="#2a2a3a"
-                strokeWidth="0.5"
-              />
-
-              {/* Head */}
-              <rect
-                x={px - 5}
-                y={py - 8}
-                width="10"
-                height="10"
-                fill={headColor}
-                stroke="#000"
-                strokeWidth="0.5"
-                rx="1"
-              />
-
-              {/* Eyes */}
-              <rect x={px - 3} y={py - 5} width="2" height="2" fill="#000" />
-              <rect x={px + 1} y={py - 5} width="2" height="2" fill="#000" />
-              <rect x={px - 2} y={py - 5} width="1" height="1" fill="#fff" opacity="0.8" />
-              <rect x={px + 2} y={py - 5} width="1" height="1" fill="#fff" opacity="0.8" />
-
-              {/* Mouth — speaking or not */}
-              {isSpeaking ? (
-                <rect x={px - 2} y={py - 1} width="4" height="2" fill="#000" rx="0.5" />
-              ) : (
-                <rect x={px - 2} y={py - 1} width="4" height="1" fill="#000" opacity="0.6" />
-              )}
-
-              {/* Speech bubble when speaking */}
-              {isSpeaking && (
-                <g>
-                  <rect
-                    x={px - 10}
-                    y={py - 28}
-                    width="20"
-                    height="12"
-                    fill="#fffde8"
-                    stroke="#bba"
-                    strokeWidth="0.8"
-                    rx="3"
-                  />
-                  {/* Tail */}
-                  <polygon
-                    points={`${px - 2},${py - 16} ${px + 2},${py - 16} ${px},${py - 10}`}
-                    fill="#fffde8"
-                  />
-                  {/* Dots inside bubble */}
-                  {[0, 1, 2].map((d) => (
-                    <circle
-                      key={d}
-                      cx={px - 4 + d * 4}
-                      cy={py - 22}
-                      r="1.5"
-                      fill={headColor}
-                      opacity={tick % 3 === d ? 1 : 0.3}
-                    />
-                  ))}
-                </g>
-              )}
-
-              {/* Name / emoji label */}
-              <text
-                x={px}
-                y={py + 26}
-                textAnchor="middle"
-                fontSize="7"
-                fill="#aaa"
-                opacity={isSpeaking ? 1 : 0.5}
-              >
-                {creator.emoji}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* Ambient particles */}
-        {[0, 1, 2, 3].map((p) => {
-          const pAngle = ((tick * 0.05 + p * 1.57) % (2 * Math.PI));
-          const pr = 100 + p * 10;
-          return (
-            <circle
-              key={`particle-${p}`}
-              cx={cx + pr * Math.cos(pAngle)}
-              cy={cy + pr * Math.sin(pAngle)}
-              r="1.5"
-              fill="#aa88ff"
-              opacity="0.4"
-            />
-          );
-        })}
-      </svg>
-
-      {/* Phrase */}
-      <p
-        key={phraseIdx}
-        className="text-sm text-neutral-400 font-mono tracking-wide animate-pulse"
-        style={{ minHeight: '1.25rem' }}
-      >
-        {PHRASES[phraseIdx]}
-      </p>
-
-      {/* Emoji row */}
-      <div className="flex gap-1.5 flex-wrap justify-center max-w-xs">
-        {CREATORS.map((c, i) => (
-          <span
-            key={c.id}
-            className="transition-all duration-300"
-            style={{
-              fontSize: i === speakingIdx ? '1.4rem' : '0.85rem',
-              filter: i === speakingIdx ? `drop-shadow(0 0 6px ${c.color})` : 'none',
-              opacity: i === speakingIdx ? 1 : 0.4,
-            }}
-          >
-            {c.emoji}
-          </span>
-        ))}
+        <canvas ref={canvasRef} width={W} height={H} style={{ display: 'block' }} />
+        {/* Mode badge */}
+        <div
+          className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-mono font-semibold tracking-wide"
+          style={{
+            background: effectiveMode === 'idle' ? 'rgba(40,40,40,0.75)'
+                      : effectiveMode === 'thinking' ? 'rgba(124,58,237,0.75)'
+                      : 'rgba(5,150,105,0.75)',
+            color: '#F5F5DC',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          {effectiveMode === 'idle' ? 'â IDLE' : effectiveMode === 'thinking' ? 'â THINKING' : 'â¶ RESPONDING'}
+        </div>
       </div>
+      {/* Scrolling label */}
+      <p
+        className="text-xs text-stone-400 font-mono tracking-wide text-center"
+        style={{ minHeight: '1.25em' }}
+      >
+        {label}
+      </p>
     </div>
   );
 }
