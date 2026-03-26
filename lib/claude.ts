@@ -181,3 +181,22 @@ function buildFallbackResponse(): CouncilResponse {
     ],
   };
 }
+
+export async function generateChatTitle(userMessage: string): Promise<string> {
+  try {
+    const response = await groq.chat.completions.create({
+      model: MODEL,
+      messages: [
+        {
+          role: 'user',
+          content: `Generate a very short title (3-6 words) for a conversation starting with: "${userMessage.slice(0, 200)}". Reply with only the title, no quotes.`,
+        },
+      ],
+      max_tokens: 20,
+      temperature: 0.7,
+    });
+    return response.choices[0]?.message?.content?.trim() || 'New Conversation';
+  } catch {
+    return 'New Conversation';
+  }
+}
