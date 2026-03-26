@@ -18,7 +18,8 @@ interface ChatWindowProps {
 function UserBubble({ content }: { content: string }) {
   return (
     <div className="flex justify-end">
-      <div className="max-w-[75%] bg-sage-600/20 border border-sage-600/30 text-neutral-100 rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed">
+
+      <CouncilThinking mode={thinking ? 'thinking' : 'idle'} />      <div className="max-w-[75%] bg-sage-600/20 border border-sage-600/30 text-neutral-100 rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed">
         {content}
       </div>
     </div>
@@ -92,13 +93,6 @@ export function ChatWindow({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-sage-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full">
