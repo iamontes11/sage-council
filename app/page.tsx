@@ -39,7 +39,7 @@ export default function LandingPage() {
             Sage Council
           </h1>
           <p className="text-xl text-neutral-400 leading-relaxed">
-            Bring your questions, decisions, and problems to a council of 9 minds —
+            Bring your questions, decisions, and problems to a council of 12 minds —
             each nurtured on their creator's real videos and ideas.
           </p>
           <p className="text-sm text-neutral-500">
