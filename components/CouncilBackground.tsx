@@ -1,23 +1,27 @@
 'use client';
 import { useEffect, useRef } from 'react';
 
-// ── 12 knights of the round table ─────────────────────────────────────────
+// \u2500\u2500 12 knights of the round table \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const KNIGHTS = [
-  { name: 'Mark Manson',     emoji: '🪨', color: '#A07850', robe: '#6B4C2A' },
-  { name: 'Derek Sivers',    emoji: '🚢', color: '#C86060', robe: '#8B2525' },
-  { name: 'Steven Bartlett', emoji: '🚀', color: '#5080D8', robe: '#1E3A8A' },
-  { name: 'theMITmonk',      emoji: '⚡', color: '#E8C030', robe: '#7A6010' },
-  { name: 'Prof. Jiang',     emoji: '🔬', color: '#38C880', robe: '#1A5E3A' },
-  { name: 'Jett Franzen',    emoji: '🎭', color: '#C045C8', robe: '#6A0E70' },
-  { name: 'Jason Pargin',    emoji: '🔍', color: '#909090', robe: '#404040' },
-  { name: 'Jay Shetty',      emoji: '🧘', color: '#38A8D8', robe: '#184A6A' },
-  { name: 'Luke Belmar',     emoji: '🔥', color: '#FF5E1A', robe: '#8B1A00' },
-  { name: 'Chase Hughes',    emoji: '🧠', color: '#D878D8', robe: '#6A286A' },
-  { name: 'Orion Taraban',   emoji: '💡', color: '#E8D820', robe: '#8A7A00' },
-  { name: 'Rick Rubin',      emoji: '🎨', color: '#8870D8', robe: '#3A2478' },
+  { name: 'Mark Manson',     emoji: '\uD83E\uDEA8', color: '#A07850', robe: '#6B4C2A' },
+  { name: 'Derek Sivers',    emoji: '\uD83D\uDEA2', color: '#C86060', robe: '#8B2525' },
+  { name: 'Steven Bartlett', emoji: '\uD83D\uDE80', color: '#5080D8', robe: '#1E3A8A' },
+  { name: 'theMITmonk',      emoji: '\u26A1', color: '#E8C030', robe: '#7A6010' },
+  { name: 'Prof. Jiang',     emoji: '\uD83D\uDD2C', color: '#38C880', robe: '#1A5E3A' },
+  { name: 'Jett Franzen',    emoji: '\uD83C\uDFAD', color: '#C045C8', robe: '#6A0E70' },
+  { name: 'Jason Pargin',    emoji: '\uD83D\uDD0D', color: '#909090', robe: '#404040' },
+  { name: 'Jay Shetty',      emoji: '\uD83E\uDDD8', color: '#38A8D8', robe: '#184A6A' },
+  { name: 'Luke Belmar',     emoji: '\uD83D\uDD25', color: '#FF5E1A', robe: '#8B1A00' },
+  { name: 'Chase Hughes',    emoji: '\uD83E\uDDE0', color: '#D878D8', robe: '#6A286A' },
+  { name: 'Orion Taraban',   emoji: '\uD83D\uDCA1', color: '#E8D820', robe: '#8A7A00' },
+  { name: 'Rick Rubin',      emoji: '\uD83C\uDFA8', color: '#8870D8', robe: '#3A2478' },
 ] as const;
 
-// ── Colours ────────────────────────────────────────────────────────────────
+// \u2500\u2500 Colours Jiang',     emoji: '\uD83D\uDD2C', color: '#38C880', robe: '#1A5E3A' },
+  { name: 'Jett Franzen',    emoji: '\uD83C\uDFAD', color: '#C045C8', robe: '#6A0E70' },
+  { name: 'Jason Pargin',    emoji: '\uD83D\uDD0D', color: '#909090', robe: '#404040' },
+  { name: 'Jay Shetty',      emoji: '\uD83E\uDDD8', color: '#38A8D8', robe: '#184A6A' },
+  { name: 'Luke B2500\u2500\u2500\u2500\u2500
 const STONE_DARK   = '#141210';
 const STONE_MID    = '#1E1A17';
 const STONE_LIGHT  = '#2A2420';
@@ -48,7 +52,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
 
-    // ── Canvas dimensions (updated on resize) ──
+    // \u2500\u2500 Canvas dimensions (updated on resize) \u2500\u2500
     let W = window.innerWidth;
     let H = window.innerHeight;
     canvas.width  = W;
@@ -62,7 +66,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
     };
     window.addEventListener('resize', onResize);
 
-    // ── Derived helpers ──
+    // \u2500\u2500 Derived helpers \u2500\u2500
     const cx   = () => W / 2;
     const cy   = () => H / 2;
     const tblR = () => Math.min(W, H) * 0.16;
@@ -76,7 +80,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
     const rnd   = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
     const seatAngle = (i: number) => -Math.PI / 2 + (i / 12) * Math.PI * 2;
 
-    // ── Agents ──
+    // \u2500\u2500 Agents \u2500\u2500
     const agents: Agent[] = KNIGHTS.map((k, i) => {
       const ang = seatAngle(i);
       const sr  = seatR();
@@ -98,7 +102,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       };
     });
 
-    // ── Particles (torch fire) ──
+    // \u2500\u2500 Particles (torch fire) \u2500\u2500
     interface Particle { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; color: string }
     const particles: Particle[] = [];
 
@@ -120,7 +124,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       { x: W - PAD - 18, y: H - PAD - 18 },
     ];
 
-    // ── Draw: room ──────────────────────────────────────────────────────────
+    // \u2500\u2500 Draw: room \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     function drawRoom(t: number) {
       // Solid backdrop
       ctx.fillStyle = STONE_DARK;
@@ -154,7 +158,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
         ctx.beginPath(); ctx.moveTo(x2, H - PAD); ctx.lineTo(x2, H); ctx.stroke();
       }
 
-      // Arched windows (left & right walls) — decorative rectangles
+      // Arched windows (left & right walls) \u2014 decorative rectangles
       const winH = 80, winW = 28;
       const winYs = [H * 0.3, H * 0.65];
       for (const wy of winYs) {
@@ -219,7 +223,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       }
     }
 
-    // ── Draw: particles ─────────────────────────────────────────────────────
+    // \u2500\u2500 Draw: particles \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     function drawParticles() {
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
@@ -237,7 +241,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       }
     }
 
-    // ── Draw: round table ───────────────────────────────────────────────────
+    // \u2500\u2500 Draw: round table \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     function drawTable(t: number) {
       const ccx = cx(), ccy = cy(), tr = tblR();
 
@@ -298,18 +302,18 @@ export default function CouncilBackground({ active = false }: { active?: boolean
         ctx.stroke();
       }
 
-      // Pulsing centre emblem ⚜
+      // Pulsing centre emblem \u269C
       const pulse = 0.82 + 0.18 * Math.sin(t * 1.4);
       ctx.globalAlpha = pulse * 0.55;
       ctx.fillStyle = TABLE_GOLD;
-      ctx.font = `${Math.round(tr * 0.42]}px serif`;
+      ctx.font = String(Math.round(tr * 0.42)) + 'px serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('⚜', ccx, ccy);
+      ctx.fillText('\u269C', ccx, ccy);
       ctx.globalAlpha = 1;
     }
 
-    // ── Draw: single agent ──────────────────────────────────────────────────
+    // \u2500\u2500 Draw: single agent \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     function drawAgent(a: Agent, t: number) {
       const { x, y, seated, blinkT, dotPhase, workPhase, color, robe, emoji } = a;
       const bW = 13, bH = 19;
@@ -387,7 +391,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       }
     }
 
-    // ── Update: agent movement ──────────────────────────────────────────────
+    // \u2500\u2500 Update: agent movement \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     function updateAgents(dt: number) {
       const active = activeRef.current;
       const ccx = cx(), ccy = cy(), tr = tblR(), sr = seatR();
@@ -433,7 +437,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       }
     }
 
-    // ── Main loop ───────────────────────────────────────────────────────────
+    // \u2500\u2500 Main loop \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     const t0 = performance.now();
     let prev = t0;
     let rafId = 0;
