@@ -17,11 +17,6 @@ const KNIGHTS = [
   { name: 'Rick Rubin',      emoji: '🎨', color: '#8870D8', robe: '#3A2478' },
 ] as const;
 
-// \u2500\u2500 Colours Jiang',     emoji: '🔬', color: '#38C880', robe: '#1A5E3A' },
-  { name: 'Jett Franzen',    emoji: '🎭', color: '#C045C8', robe: '#6A0E70' },
-  { name: 'Jason Pargin',    emoji: '🔍', color: '#909090', robe: '#404040' },
-  { name: 'Jay Shetty',      emoji: '🧘', color: '#38A8D8', robe: '#184A6A' },
-  { name: 'Luke B2500\u2500\u2500\u2500\u2500
 const STONE_DARK   = '#141210';
 const STONE_MID    = '#1E1A17';
 const STONE_LIGHT  = '#2A2420';
