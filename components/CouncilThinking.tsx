@@ -114,7 +114,7 @@ export default function CouncilThinking({ mode, thinking }: Props) {
 
   const IDLE_PHRASES   = ['Gathering knowledge…','Surveying the realm…','Awaiting consultation…','Studying the archives…','In council…'];
   const THINK_PHRASES  = ['Deliberating…','Cross-referencing sources…','Synthesising perspectives…','Running deep analysis…','Consulting the scrolls…'];
-  const RESP_PHRASES   = ['Formulating response…','Drafting the council's answer…','Presenting findings…','Sharing expert views…','Delivering insight…'];
+  const RESP_PHRASES   = ['Formulating response…',"Drafting the council's answer…",'Presenting findings…','Sharing expert views…','Delivering insight…'];
 
   useEffect(() => {
     const pool = effectiveMode === 'thinking' ? THINK_PHRASES
