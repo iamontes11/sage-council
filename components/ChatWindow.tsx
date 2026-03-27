@@ -1,7 +1,7 @@
 'use client';
-
 import { useEffect, useRef, useState } from 'react';
-import { Send, AlertCircle, X } from 'lucide-react';
+import { Send, AlertCircle, X, Home, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { ChoiceCard } from './ChoiceCard';
 import CouncilThinking from './CouncilThinking';
 import type { Message, CouncilResponse } from '@/types';
@@ -18,8 +18,7 @@ interface ChatWindowProps {
 function UserBubble({ content }: { content: string }) {
   return (
     <div className="flex justify-end">
-
-      <CouncilThinking mode={thinking ? 'thinking' : 'idle'} />      <div className="max-w-[75%] bg-sage-600/20 border border-sage-600/30 text-neutral-100 rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed">
+      <div className="max-w-[75%] bg-sage-600/20 border border-sage-600/30 text-neutral-100 rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed">
         {content}
       </div>
     </div>
@@ -28,7 +27,7 @@ function UserBubble({ content }: { content: string }) {
 
 function CouncilBubble({ response }: { response: CouncilResponse }) {
   return (
-    <div className="space-y-4 animate-slide-up">
+    <div className="space-y-5 animate-slide-up">
       {/* Council header */}
       <div className="flex items-center gap-3">
         <div className="text-2xl">🔮</div>
@@ -38,15 +37,23 @@ function CouncilBubble({ response }: { response: CouncilResponse }) {
         </div>
       </div>
 
-      {/* Council note */}
+      {/* Council note -- collective meta-insight */}
       {response.council_note && (
-        <p className="text-xs text-neutral-500 italic border-l-2 border-white/10 pl-3">
-          {response.council_note}
-        </p>
+        <div className="relative rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent px-5 py-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles size={12} className="text-neutral-500" />
+            <span className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">
+              Council Insight
+            </span>
+          </div>
+          <p className="text-neutral-300 text-sm leading-relaxed italic">
+            {response.council_note}
+          </p>
+        </div>
       )}
 
       {/* Choice cards */}
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-4">
         {response.choices?.map((choice, i) => (
           <ChoiceCard key={choice.id || i} choice={choice} index={i} />
         ))}
@@ -66,6 +73,7 @@ export function ChatWindow({
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -93,15 +101,37 @@ export function ChatWindow({
     }
   };
 
-
   return (
     <div className="flex flex-col h-full">
+      {/* Top bar with home button */}
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-[#0f0f0f]">
+        <button
+          onClick={() => router.push('/')}
+          title="Back to Home"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 transition-all text-sm group"
+        >
+          <Home size={15} className="group-hover:scale-110 transition-transform" />
+          <span className="hidden sm:inline font-medium">Home</span>
+        </button>
+        <div className="flex-1" />
+        <div className="flex items-center gap-2 text-neutral-600 text-xs">
+          <span className="text-base">🔮</span>
+          <span className="hidden sm:inline">Sage Council</span>
+        </div>
+      </div>
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
           {messages.length === 0 && !thinking ? (
-            <div className="text-center py-12 text-neutral-600">
-              <p>Ask the Council anything...</p>
+            <div className="text-center py-16 space-y-3">
+              <div className="text-4xl">🔮</div>
+              <p className="text-neutral-500 text-sm">
+                Bring the Council a decision, a challenge, or a question.
+              </p>
+              <p className="text-neutral-600 text-xs max-w-xs mx-auto leading-relaxed">
+                You will receive 3 deeply reasoned perspectives drawn from 12 distinct thinkers.
+              </p>
             </div>
           ) : (
             <>
@@ -143,7 +173,7 @@ export function ChatWindow({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask the Council anything — a decision, a problem, a creative challenge..."
+            placeholder="Ask the Council anything -- a decision, a problem, a creative challenge..."
             rows={1}
             className="flex-1 bg-transparent text-neutral-100 placeholder-neutral-600 text-sm resize-none outline-none leading-relaxed"
             disabled={thinking}
