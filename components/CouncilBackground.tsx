@@ -1,23 +1,23 @@
 'use client';
 import { useEffect, useRef } from 'react';
 
-// ââ 12 knights of the round table âââââââââââââââââââââââââââââââââââââââââ
+// ── 12 knights of the round table ─────────────────────────────────────────
 const KNIGHTS = [
-  { name: 'Mark Manson',     emoji: 'ðª¨', color: '#A07850', robe: '#6B4C2A' },
-  { name: 'Derek Sivers',    emoji: 'ð¢', color: '#C86060', robe: '#8B2525' },
-  { name: 'Steven Bartlett', emoji: 'ð', color: '#5080D8', robe: '#1E3A8A' },
-  { name: 'theMITmonk',      emoji: 'â¡', color: '#E8C030', robe: '#7A6010' },
-  { name: 'Prof. Jiang',     emoji: 'ð¬', color: '#38C880', robe: '#1A5E3A' },
-  { name: 'Jett Franzen',    emoji: 'ð­', color: '#C045C8', robe: '#6A0E70' },
-  { name: 'Jason Pargin',    emoji: 'ð', color: '#909090', robe: '#404040' },
-  { name: 'Jay Shetty',      emoji: 'ð§', color: '#38A8D8', robe: '#184A6A' },
-  { name: 'Luke Belmar',     emoji: 'ð¥', color: '#FF5E1A', robe: '#8B1A00' },
-  { name: 'Chase Hughes',    emoji: 'ð§ ', color: '#D878D8', robe: '#6A286A' },
-  { name: 'Orion Taraban',   emoji: 'ð¡', color: '#E8D820', robe: '#8A7A00' },
-  { name: 'Rick Rubin',      emoji: 'ð¨', color: '#8870D8', robe: '#3A2478' },
+  { name: 'Mark Manson',     emoji: '🪨', color: '#A07850', robe: '#6B4C2A' },
+  { name: 'Derek Sivers',    emoji: '🚢', color: '#C86060', robe: '#8B2525' },
+  { name: 'Steven Bartlett', emoji: '🚀', color: '#5080D8', robe: '#1E3A8A' },
+  { name: 'theMITmonk',      emoji: '⚡', color: '#E8C030', robe: '#7A6010' },
+  { name: 'Prof. Jiang',     emoji: '🔬', color: '#38C880', robe: '#1A5E3A' },
+  { name: 'Jett Franzen',    emoji: '🎭', color: '#C045C8', robe: '#6A0E70' },
+  { name: 'Jason Pargin',    emoji: '🔍', color: '#909090', robe: '#404040' },
+  { name: 'Jay Shetty',      emoji: '🧘', color: '#38A8D8', robe: '#184A6A' },
+  { name: 'Luke Belmar',     emoji: '🔥', color: '#FF5E1A', robe: '#8B1A00' },
+  { name: 'Chase Hughes',    emoji: '🧠', color: '#D878D8', robe: '#6A286A' },
+  { name: 'Orion Taraban',   emoji: '💡', color: '#E8D820', robe: '#8A7A00' },
+  { name: 'Rick Rubin',      emoji: '🎨', color: '#8870D8', robe: '#3A2478' },
 ] as const;
 
-// ââ Colours ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Colours ────────────────────────────────────────────────────────────────
 const STONE_DARK   = '#141210';
 const STONE_MID    = '#1E1A17';
 const STONE_LIGHT  = '#2A2420';
@@ -48,7 +48,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
 
-    // ââ Canvas dimensions (updated on resize) ââ
+    // ── Canvas dimensions (updated on resize) ──
     let W = window.innerWidth;
     let H = window.innerHeight;
     canvas.width  = W;
@@ -62,7 +62,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
     };
     window.addEventListener('resize', onResize);
 
-    // ââ Derived helpers ââ
+    // ── Derived helpers ──
     const cx   = () => W / 2;
     const cy   = () => H / 2;
     const tblR = () => Math.min(W, H) * 0.16;
@@ -70,14 +70,13 @@ export default function CouncilBackground({ active = false }: { active?: boolean
     const PAD  = 56;
 
     const lerp  = (a: number, b: number, t: number) => a + (b - a) * t;
-    const dist  = (
-x1: number, y1: number, x2: number, y2: number) =>
+    const dist  = (x1: number, y1: number, x2: number, y2: number) =>
       Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
     const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
     const rnd   = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
     const seatAngle = (i: number) => -Math.PI / 2 + (i / 12) * Math.PI * 2;
 
-    // ââ Agents ââ
+    // ── Agents ──
     const agents: Agent[] = KNIGHTS.map((k, i) => {
       const ang = seatAngle(i);
       const sr  = seatR();
@@ -99,7 +98,7 @@ x1: number, y1: number, x2: number, y2: number) =>
       };
     });
 
-    // ââ Particles (torch fire) ââ
+    // ── Particles (torch fire) ──
     interface Particle { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; color: string }
     const particles: Particle[] = [];
 
@@ -121,7 +120,7 @@ x1: number, y1: number, x2: number, y2: number) =>
       { x: W - PAD - 18, y: H - PAD - 18 },
     ];
 
-    // ââ Draw: room ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+    // ── Draw: room ──────────────────────────────────────────────────────────
     function drawRoom(t: number) {
       // Solid backdrop
       ctx.fillStyle = STONE_DARK;
@@ -155,7 +154,7 @@ x1: number, y1: number, x2: number, y2: number) =>
         ctx.beginPath(); ctx.moveTo(x2, H - PAD); ctx.lineTo(x2, H); ctx.stroke();
       }
 
-      // Arched windows (left & right walls) â decorative rectangles
+      // Arched windows (left & right walls) — decorative rectangles
       const winH = 80, winW = 28;
       const winYs = [H * 0.3, H * 0.65];
       for (const wy of winYs) {
@@ -220,7 +219,7 @@ x1: number, y1: number, x2: number, y2: number) =>
       }
     }
 
-    // ââ Draw: particles âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+    // ── Draw: particles ─────────────────────────────────────────────────────
     function drawParticles() {
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
@@ -238,7 +237,7 @@ x1: number, y1: number, x2: number, y2: number) =>
       }
     }
 
-    // ââ Draw: round table âââââââââââââââââââââââââââââââââââââââââââââââââââ
+    // ── Draw: round table ───────────────────────────────────────────────────
     function drawTable(t: number) {
       const ccx = cx(), ccy = cy(), tr = tblR();
 
@@ -299,18 +298,18 @@ x1: number, y1: number, x2: number, y2: number) =>
         ctx.stroke();
       }
 
-      // Pulsing centre emblem â
+      // Pulsing centre emblem ⚜
       const pulse = 0.82 + 0.18 * Math.sin(t * 1.4);
       ctx.globalAlpha = pulse * 0.55;
       ctx.fillStyle = TABLE_GOLD;
       ctx.font = `${Math.round(tr * 0.42]}px serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('â', ccx, ccy);
+      ctx.fillText('⚜', ccx, ccy);
       ctx.globalAlpha = 1;
     }
 
-    // ââ Draw: single agent ââââââââââââââââââââââââââââââââââââââââââââââââââ
+    // ── Draw: single agent ──────────────────────────────────────────────────
     function drawAgent(a: Agent, t: number) {
       const { x, y, seated, blinkT, dotPhase, workPhase, color, robe, emoji } = a;
       const bW = 13, bH = 19;
@@ -388,7 +387,7 @@ x1: number, y1: number, x2: number, y2: number) =>
       }
     }
 
-    // ââ Update: agent movement ââââââââââââââââââââââââââââââââââââââââââââââ
+    // ── Update: agent movement ──────────────────────────────────────────────
     function updateAgents(dt: number) {
       const active = activeRef.current;
       const ccx = cx(), ccy = cy(), tr = tblR(), sr = seatR();
@@ -434,7 +433,7 @@ x1: number, y1: number, x2: number, y2: number) =>
       }
     }
 
-    // ââ Main loop âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+    // ── Main loop ───────────────────────────────────────────────────────────
     const t0 = performance.now();
     let prev = t0;
     let rafId = 0;
