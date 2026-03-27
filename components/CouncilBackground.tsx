@@ -3,24 +3,24 @@ import { useEffect, useRef } from 'react';
 
 // \u2500\u2500 12 knights of the round table \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const KNIGHTS = [
-  { name: 'Mark Manson',     emoji: '\uD83E\uDEA8', color: '#A07850', robe: '#6B4C2A' },
-  { name: 'Derek Sivers',    emoji: '\uD83D\uDEA2', color: '#C86060', robe: '#8B2525' },
-  { name: 'Steven Bartlett', emoji: '\uD83D\uDE80', color: '#5080D8', robe: '#1E3A8A' },
+  { name: 'Mark Manson',     emoji: '\u{1FAA8}', color: '#A07850', robe: '#6B4C2A' },
+  { name: 'Derek Sivers',    emoji: '\u{1F6A2}', color: '#C86060', robe: '#8B2525' },
+  { name: 'Steven Bartlett', emoji: '\u{1F680}', color: '#5080D8', robe: '#1E3A8A' },
   { name: 'theMITmonk',      emoji: '\u26A1', color: '#E8C030', robe: '#7A6010' },
-  { name: 'Prof. Jiang',     emoji: '\uD83D\uDD2C', color: '#38C880', robe: '#1A5E3A' },
-  { name: 'Jett Franzen',    emoji: '\uD83C\uDFAD', color: '#C045C8', robe: '#6A0E70' },
-  { name: 'Jason Pargin',    emoji: '\uD83D\uDD0D', color: '#909090', robe: '#404040' },
-  { name: 'Jay Shetty',      emoji: '\uD83E\uDDD8', color: '#38A8D8', robe: '#184A6A' },
-  { name: 'Luke Belmar',     emoji: '\uD83D\uDD25', color: '#FF5E1A', robe: '#8B1A00' },
-  { name: 'Chase Hughes',    emoji: '\uD83E\uDDE0', color: '#D878D8', robe: '#6A286A' },
-  { name: 'Orion Taraban',   emoji: '\uD83D\uDCA1', color: '#E8D820', robe: '#8A7A00' },
-  { name: 'Rick Rubin',      emoji: '\uD83C\uDFA8', color: '#8870D8', robe: '#3A2478' },
+  { name: 'Prof. Jiang',     emoji: '\u{1F52C}', color: '#38C880', robe: '#1A5E3A' },
+  { name: 'Jett Franzen',    emoji: '\u{1F3AD}', color: '#C045C8', robe: '#6A0E70' },
+  { name: 'Jason Pargin',    emoji: '\u{1F50D}', color: '#909090', robe: '#404040' },
+  { name: 'Jay Shetty',      emoji: '\u{1F9D8}', color: '#38A8D8', robe: '#184A6A' },
+  { name: 'Luke Belmar',     emoji: '\u{1F525}', color: '#FF5E1A', robe: '#8B1A00' },
+  { name: 'Chase Hughes',    emoji: '\u{1F9E0}', color: '#D878D8', robe: '#6A286A' },
+  { name: 'Orion Taraban',   emoji: '\u{1F4A1}', color: '#E8D820', robe: '#8A7A00' },
+  { name: 'Rick Rubin',      emoji: '\u{1F3A8}', color: '#8870D8', robe: '#3A2478' },
 ] as const;
 
-// \u2500\u2500 Colours Jiang',     emoji: '\uD83D\uDD2C', color: '#38C880', robe: '#1A5E3A' },
-  { name: 'Jett Franzen',    emoji: '\uD83C\uDFAD', color: '#C045C8', robe: '#6A0E70' },
-  { name: 'Jason Pargin',    emoji: '\uD83D\uDD0D', color: '#909090', robe: '#404040' },
-  { name: 'Jay Shetty',      emoji: '\uD83E\uDDD8', color: '#38A8D8', robe: '#184A6A' },
+// \u2500\u2500 Colours Jiang',     emoji: '\u{1F52C}', color: '#38C880', robe: '#1A5E3A' },
+  { name: 'Jett Franzen',    emoji: '\u{1F3AD}', color: '#C045C8', robe: '#6A0E70' },
+  { name: 'Jason Pargin',    emoji: '\u{1F50D}', color: '#909090', robe: '#404040' },
+  { name: 'Jay Shetty',      emoji: '\u{1F9D8}', color: '#38A8D8', robe: '#184A6A' },
   { name: 'Luke B2500\u2500\u2500\u2500\u2500
 const STONE_DARK   = '#141210';
 const STONE_MID    = '#1E1A17';
