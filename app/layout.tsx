@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import CouncilBackground from "@/components/CouncilBackground";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +23,10 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers session={session}>{children}</Providers>
+        <CouncilBackground />
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <Providers session={session}>{children}</Providers>
+        </div>
       </body>
     </html>
   );
