@@ -7,10 +7,10 @@ type Mode = 'idle' | 'thinking' | 'responding';
 
 interface Props {
   mode?: Mode;
-  thinking?: boolean; // backwards compat â true maps to 'thinking'
+  thinking?: boolean; // backwards compat — true maps to 'thinking'
 }
 
-// âââ Pixel palette âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Pixel palette ───────────────────────────────────────────────────────────
 const WOOD   = '#8B5E3C';
 const STONE  = '#6B7280';
 const FLOOR  = '#2D2A24';
@@ -37,7 +37,7 @@ const CX = 170, CY = 185;
 const TABLE_R = 72;
 const ROOM_PAD = 28;
 
-// âââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 function rnd(lo: number, hi: number) { return lo + Math.random() * (hi - lo); }
@@ -45,7 +45,7 @@ function dist(ax: number, ay: number, bx: number, by: number) {
   return Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2);
 }
 
-// âââ Build seat positions around the table ââââââââââââââââââââââââââââââââââââ
+// ─── Build seat positions around the table ────────────────────────────────────
 function buildSeats(n: number) {
   return Array.from({ length: n }, (_, i) => {
     const a = (i / n) * Math.PI * 2 - Math.PI / 2;
@@ -53,7 +53,7 @@ function buildSeats(n: number) {
   });
 }
 
-// âââ Agent state ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Agent state ──────────────────────────────────────────────────────────────
 interface Agent {
   x: number; y: number;       // current position
   tx: number; ty: number;     // target position (wander)
@@ -82,7 +82,7 @@ function buildAgents(creators: typeof CREATORS): Agent[] {
       sx: seats[i].x, sy: seats[i].y,
       vx: 0, vy: 0,
       color: AGENT_COLORS[i % AGENT_COLORS.length],
-      emoji: c.emoji || 'ð¤',
+      emoji: c.emoji || '🤖',
       name: c.name,
       phase: rnd(0, Math.PI * 2),
       workPhase: rnd(0, Math.PI * 2),
@@ -94,7 +94,7 @@ function buildAgents(creators: typeof CREATORS): Agent[] {
   });
 }
 
-// âââ Component ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function CouncilThinking({ mode, thinking }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const agentsRef = useRef<Agent[]>([]);
@@ -112,9 +112,9 @@ export default function CouncilThinking({ mode, thinking }: Props) {
   const [label, setLabel] = useState('');
   const labelRef = useRef('');
 
-  const IDLE_PHRASES   = ['Gathering knowledgeâ¦','Surveying the realmâ¦','Awaiting consultationâ¦','Studying the archivesâ¦','In councilâ¦'];
-  const THINK_PHRASES  = ['Deliberatingâ¦','Cross-referencing sourcesâ¦','Synthesising perspectivesâ¦','Running deep analysisâ¦','Consulting the scrollsâ¦'];
-  const RESP_PHRASES   = ['Formulating responseâ¦','Drafting the council's answerâ¦','Presenting findingsâ¦','Sharing expert viewsâ¦','Delivering insightâ¦'];
+  const IDLE_PHRASES   = ['Gathering knowledge…','Surveying the realm…','Awaiting consultation…','Studying the archives…','In council…'];
+  const THINK_PHRASES  = ['Deliberating…','Cross-referencing sources…','Synthesising perspectives…','Running deep analysis…','Consulting the scrolls…'];
+  const RESP_PHRASES   = ['Formulating response…','Drafting the council's answer…','Presenting findings…','Sharing expert views…','Delivering insight…'];
 
   useEffect(() => {
     const pool = effectiveMode === 'thinking' ? THINK_PHRASES
@@ -143,7 +143,7 @@ export default function CouncilThinking({ mode, thinking }: Props) {
     const agents = agentsRef.current;
     t0Ref.current = performance.now();
 
-    // ââ Torch positions (corners) ââ
+    // ── Torch positions (corners) ──
     const torches = [
       { x: ROOM_PAD + 6, y: ROOM_PAD + 6 },
       { x: W - ROOM_PAD - 6, y: ROOM_PAD + 6 },
@@ -151,7 +151,7 @@ export default function CouncilThinking({ mode, thinking }: Props) {
       { x: W - ROOM_PAD - 6, y: H - ROOM_PAD - 6 },
     ];
 
-    // ââ Particle pool ââ
+    // ── Particle pool ──
     const particles: { x:number; y:number; vx:number; vy:number; life:number; maxLife:number; color:string }[] = [];
 
     function spawnParticle(x: number, y: number, color: string) {
@@ -166,7 +166,7 @@ export default function CouncilThinking({ mode, thinking }: Props) {
       });
     }
 
-    // ââ Drawing helpers ââ
+    // ── Drawing helpers ──
     function drawRoom() {
       // Floor checkerboard (subtle)
       const tileW = 20;
@@ -387,7 +387,7 @@ export default function CouncilThinking({ mode, thinking }: Props) {
         }
       }
 
-      // Name label (when idle or consulting â show briefly)
+      // Name label (when idle or consulting — show briefly)
       // Not rendered to keep scene clean; emoji is the identity marker
     }
 
@@ -408,7 +408,7 @@ export default function CouncilThinking({ mode, thinking }: Props) {
       }
     }
 
-    // ââ Agent movement ââ
+    // ── Agent movement ──
     function updateAgents(t: number, dt: number) {
       const m = modeRef.current;
       const speed = m === 'idle' ? 0.6 : 0;
@@ -454,7 +454,7 @@ export default function CouncilThinking({ mode, thinking }: Props) {
       }
     }
 
-    // ââ Main loop ââ
+    // ── Main loop ──
     let prev = performance.now();
     function frame(now: number) {
       const dt = (now - prev) / 1000;
@@ -484,7 +484,7 @@ export default function CouncilThinking({ mode, thinking }: Props) {
 
     rafRef.current = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(rafRef.current);
-  // Only run once â mode changes are handled via modeRef
+  // Only run once — mode changes are handled via modeRef
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -506,7 +506,7 @@ export default function CouncilThinking({ mode, thinking }: Props) {
             backdropFilter: 'blur(4px)',
           }}
         >
-          {effectiveMode === 'idle' ? 'â IDLE' : effectiveMode === 'thinking' ? 'â THINKING' : 'â¶ RESPONDING'}
+          {effectiveMode === 'idle' ? '● IDLE' : effectiveMode === 'thinking' ? '◆ THINKING' : '▶ RESPONDING'}
         </div>
       </div>
       {/* Scrolling label */}
