@@ -65,7 +65,6 @@ export default function NewChatPage() {
         {CREATORS.map((c, i) => (
           <motion.div
             key={c.id}
-                key={c.id}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 + i * 0.03, duration: 0.25 }}
