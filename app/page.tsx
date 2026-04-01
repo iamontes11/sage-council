@@ -3,6 +3,7 @@
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { CREATORS } from '@/lib/creators';
 
 export default function LandingPage() {
@@ -25,48 +26,76 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] flex flex-col items-center justify-center px-6 overflow-hidden relative">
-      {/* Background glow */}
+      {/* Background glows */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-sage-600/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
       </div>
 
-      <div className="relative z-10 max-w-2xl w-full text-center space-y-8">
-        {/* Logo */}
-        <div className="space-y-3">
-          <div className="text-6xl">🔮</div>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10 max-w-2xl w-full text-center space-y-8"
+      >
+        {/* Logo & headline */}
+        <div className="space-y-4">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.4, ease: 'easeOut' }}
+            className="text-6xl"
+          >
+            ð®
+          </motion.div>
           <h1 className="text-5xl font-bold text-white tracking-tight">
             Sage Council
           </h1>
-          <p className="text-xl text-neutral-400 leading-relaxed">
-            Bring your questions, decisions, and problems to a council of 12 minds —
-            each nurtured on their creator's real videos and ideas.
+          <p className="text-lg text-neutral-400 leading-relaxed max-w-lg mx-auto">
+            Bring your questions, decisions, and problems to a council of 12
+            minds &mdash; each nurtured on their creator&apos;s real videos and ideas.
           </p>
           <p className="text-sm text-neutral-500">
-            Every response: 3 distinct perspectives, each from a different philosophical tradition.
+            Every response: 3 distinct perspectives, each from a different
+            philosophical tradition.
           </p>
         </div>
 
         {/* Creator grid */}
-        <div className="grid grid-cols-3 gap-2 py-4">
-          {CREATORS.map((creator) => (
-            <div
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.25, duration: 0.4 }}
+          className="grid grid-cols-3 sm:grid-cols-4 gap-2 py-4"
+        >
+          {CREATORS.map((creator, i) => (
+            <motion.div
               key={creator.id}
-              className="flex flex-col items-center gap-1 py-3 px-2 rounded-xl bg-white/5 border border-white/10"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 + i * 0.03, duration: 0.25 }}
+              className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.07] hover:border-white/[0.15] transition-all duration-200 cursor-default group"
             >
-              <span className="text-2xl">{creator.emoji}</span>
+              <span className="text-2xl group-hover:scale-110 transition-transform">
+                {creator.emoji}
+              </span>
               <span className="text-xs text-neutral-300 font-medium text-center leading-tight">
                 {creator.name}
               </span>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {/* Sign in */}
-        <div className="space-y-4">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.35 }}
+          className="space-y-4"
+        >
           <button
             onClick={() => signIn('google', { callbackUrl: '/chat' })}
-            className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-semibold py-4 px-6 rounded-xl hover:bg-gray-100 transition-colors text-base"
+            className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-semibold py-4 px-6 rounded-xl hover:bg-gray-100 active:scale-[0.98] transition-all text-base shadow-lg shadow-white/5"
           >
             <svg width="20" height="20" viewBox="0 0 24 24">
               <path
@@ -91,8 +120,8 @@ export default function LandingPage() {
           <p className="text-xs text-neutral-600">
             Your chats are private and stored securely. No ads, no data selling.
           </p>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
