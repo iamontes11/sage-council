@@ -50,7 +50,7 @@ function CouncilBubble({ response }: { response: CouncilResponse }) {
         </div>
         <div>
           <p className="text-white font-semibold text-sm">El Consejo Sabio</p>
-          <p className="text-neutral-500 text-xs">3 perspectivas distintas</p>
+          <p className="text-neutral-500 text-xs">1 best answer</p>
         </div>
       </div>
 
@@ -110,7 +110,7 @@ function ThinkingSkeleton() {
       </div>
       <div className="skeleton h-24 w-full rounded-xl" />
       <div className="space-y-3">
-        {[0, 1, 2].map((i) => (
+        {[0].map((i) => (
           <div
             key={i}
             className="skeleton h-32 w-full rounded-xl"
@@ -199,7 +199,7 @@ export function ChatWindow({
                 Trae al Consejo una decisiÃ³n, un reto o una pregunta.
               </p>
               <p className="text-neutral-600 text-xs max-w-sm mx-auto leading-relaxed">
-                RecibirÃ¡s 3 perspectivas profundamente razonadas de 12 pensadores distintos.
+                RecibirÃ¡s la mejor respuesta, destilada de 12 pensadores distintos.
               </p>
             </motion.div>
           ) : (
