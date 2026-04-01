@@ -50,7 +50,7 @@ export default function NewChatPage() {
         </h1>
         <p className="text-neutral-400 text-sm max-w-lg mx-auto leading-relaxed">
           Ask anything &mdash; a decision, a problem, a creative challenge. The
-          council will give you 3 distinct perspectives, each rooted in your
+          council will give you 1 best answer, rooted in your
           favorite thinkers&apos; real ideas.
         </p>
       </motion.div>
@@ -65,6 +65,7 @@ export default function NewChatPage() {
         {CREATORS.map((c, i) => (
           <motion.div
             key={c.id}
+                key={c.id}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 + i * 0.03, duration: 0.25 }}
