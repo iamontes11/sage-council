@@ -109,3 +109,27 @@ export async function ingestMultipleVideos(
 
   return { success, failed };
 }
+
+
+/** Ingest a plain text file (no video ID needed) */
+export async function ingestTextFile(
+  creatorId: string,
+  fileName: string,
+  textContent: string,
+): Promise<{ fileId: string; chunks: number }> {
+  if (!textContent || textContent.trim().length === 0) {
+    throw new Error('File content is empty');
+  }
+
+  const fileId = 'txt-' + Date.now().toString(36);
+  const textChunks = chunkText(textContent, 350, 50);
+
+  await saveTranscriptChunks(
+    creatorId,
+    fileId,
+    fileName || 'Uploaded text file',
+    textChunks,
+  );
+
+  return { fileId, chunks: textChunks.length };
+}
