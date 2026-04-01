@@ -56,8 +56,8 @@ export default function LandingPage() {
             minds &mdash; each nurtured on their creator&apos;s real videos and ideas.
           </p>
           <p className="text-sm text-neutral-500">
-            Every response: 3 distinct perspectives, each from a different
-            philosophical tradition.
+            Every response: 1 best answer, distilled from multiple
+            philosophical traditions.
           </p>
         </div>
 
@@ -66,7 +66,7 @@ export default function LandingPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.25, duration: 0.4 }}
-          className="grid grid-cols-3 sm:grid-cols-4 gap-2 py-4"
+          className="grid grid-cols-3 sm:grid-cols-4 gap-2 py44"
         >
           {CREATORS.map((creator, i) => (
             <motion.div
