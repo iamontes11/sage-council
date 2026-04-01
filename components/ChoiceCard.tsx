@@ -13,42 +13,30 @@ interface ChoiceCardProps {
 }
 
 const CARD_GRADIENTS = [
-  'from-red-500/10 via-orange-500/5 to-transparent',
-  'from-blue-500/10 via-indigo-500/5 to-transparent',
-  'from-green-500/10 via-teal-500/5 to-transparent',
+  'from-sage-500/10 via-sage-500/5 to-transparent',
 ];
 
 const CARD_BORDERS = [
-  'border-red-500/20 hover:border-red-500/35',
-  'border-blue-500/20 hover:border-blue-500/35',
-  'border-green-500/20 hover:border-green-500/35',
+  'border-sage-500/20 hover:border-sage-500/35',
 ];
 
 const GLOW_SHADOWS = [
-  'hover:shadow-[0_0_20px_rgba(239,68,68,0.06)]',
-  'hover:shadow-[0_0_20px_rgba(59,130,246,0.06)]',
   'hover:shadow-[0_0_20px_rgba(34,197,94,0.06)]',
 ];
 
-const CHOICE_LABELS = ['Path One', 'Path Two', 'Path Three'];
-const CHOICE_COLORS = ['text-red-400', 'text-blue-400', 'text-green-400'];
+const CHOICE_LABELS = ['Best Path'];
+const CHOICE_COLORS = ['text-sage-400'];
 
 const STEP_COLORS = [
-  'bg-red-500/10 border-red-500/20 text-red-300',
-  'bg-blue-500/10 border-blue-500/20 text-blue-300',
-  'bg-green-500/10 border-green-500/20 text-green-300',
+  'bg-sage-500/10 border-sage-500/20 text-sage-300',
 ];
 
 const DIVIDER_COLORS = [
-  'border-red-500/10',
-  'border-blue-500/10',
-  'border-green-500/10',
+  'border-sage-500/10',
 ];
 
 const ADVICE_LABEL_COLORS = [
-  'text-red-400/70',
-  'text-blue-400/70',
-  'text-green-400/70',
+  'text-sage-400/70',
 ];
 
 export function ChoiceCard({ choice, index }: ChoiceCardProps) {
