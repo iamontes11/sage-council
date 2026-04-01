@@ -180,7 +180,7 @@ export function Sidebar({ user }: SidebarProps) {
               Sage Council
             </h1>
             <p className="text-neutral-600 text-[11px]">
-              12 minds, 3 perspectives
+              12 minds, 1 best answer
             </p>
           </div>
         </div>
