@@ -40,8 +40,9 @@ export default function AdminPage() {
   const [stats, setStats] = useState<TranscriptStat[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'youtube' | 'file'>('youtube');
-  const [fileResult, setFileResult] = useState<IngestResult | null>(null);
+  const [fileResults, setFileResults] = useState<(IngestResult & { fileName?: string })[]>([]);
   const [fileLoading, setFileLoading] = useState(false);
+  const [fileProgress, setFileProgress] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -104,39 +105,45 @@ export default function AdminPage() {
   };
 
   const handleFileUpload = async () => {
-    const file = fileInputRef.current?.files?.[0];
-    if (!file || fileLoading) return;
+    const files = fileInputRef.current?.files;
+    if (!files || files.length === 0 || fileLoading) return;
 
     setFileLoading(true);
-    setFileResult(null);
+    setFileResults([]);
+    const results: (IngestResult & { fileName?: string })[] = [];
 
-    try {
-      const text = await file.text();
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      setFileProgress(`Uploading ${i + 1} of ${files.length}: ${file.name}`);
 
-      const res = await fetch('/api/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          creatorId: selectedCreator,
-          fileName: file.name,
-          transcript: text,
-        }),
-      });
+      try {
+        const text = await file.text();
 
-      const data = await res.json();
-      setFileResult(data);
+        const res = await fetch('/api/ingest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            creatorId: selectedCreator,
+            fileName: file.name,
+            transcript: text,
+          }),
+        });
 
-      if (data.success) {
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        const statsRes = await fetch('/api/ingest');
-        const statsData = await statsRes.json();
-        setStats(statsData.stats || []);
+        const data = await res.json();
+        results.push({ ...data, fileName: file.name });
+      } catch (err) {
+        results.push({ success: false, error: 'Network error', fileName: file.name });
       }
-    } catch (err) {
-      setFileResult({ success: false, error: 'Network error' });
-    } finally {
-      setFileLoading(false);
     }
+
+    setFileResults(results);
+    setFileProgress('');
+
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    const statsRes = await fetch('/api/ingest');
+    const statsData = await statsRes.json();
+    setStats(statsData.stats || []);
+    setFileLoading(false);
   };
 
   if (status === 'loading') {
@@ -217,7 +224,7 @@ export default function AdminPage() {
             }`}
           >
             <FileText size={16} />
-            Upload .txt File
+            Upload .txt Files
           </button>
         </div>
 
@@ -311,7 +318,7 @@ export default function AdminPage() {
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
             <div className="flex items-center gap-3">
               <Upload size={20} className="text-sage-400" />
-              <h2 className="text-white font-semibold">Upload Text File</h2>
+              <h2 className="text-white font-semibold">Upload Text Files</h2>
             </div>
 
             <div>
@@ -333,31 +340,44 @@ export default function AdminPage() {
 
             <div>
               <label className="block text-xs text-neutral-500 uppercase tracking-wider font-medium mb-2">
-                Text File (.txt)
+                Text Files (.txt)
               </label>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".txt"
+                multiple
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-sage-400/20 file:text-sage-400 hover:file:bg-sage-400/30 focus:outline-none focus:border-sage-400/50"
               />
-              <p className="text-neutral-500 text-xs mt-1">No file size limit. The file will be chunked automatically.</p>
+              <p className="text-neutral-500 text-xs mt-1">Select multiple files at once. No file size limit.</p>
             </div>
 
-            {fileResult && (
-              <div
-                className={`flex items-start gap-3 px-4 py-3 rounded-xl text-sm border ${
-                  fileResult.success
-                    ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                    : 'bg-red-500/10 border-red-500/20 text-red-400'
-                }`}
-              >
-                {fileResult.success ? (
-                  <CheckCircle size={16} className="shrink-0 mt-0.5" />
-                ) : (
-                  <XCircle size={16} className="shrink-0 mt-0.5" />
-                )}
-                <span>{fileResult.message || fileResult.error}</span>
+            {fileProgress && (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm border bg-blue-500/10 border-blue-500/20 text-blue-400">
+                <Loader2 size={16} className="animate-spin shrink-0" />
+                <span>{fileProgress}</span>
+              </div>
+            )}
+
+            {fileResults.length > 0 && (
+              <div className="space-y-2">
+                {fileResults.map((fr, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-3 px-4 py-3 rounded-xl text-sm border ${
+                      fr.success
+                        ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                        : 'bg-red-500/10 border-red-500/20 text-red-400'
+                    }`}
+                  >
+                    {fr.success ? (
+                      <CheckCircle size={16} className="shrink-0 mt-0.5" />
+                    ) : (
+                      <XCircle size={16} className="shrink-0 mt-0.5" />
+                    )}
+                    <span>{fr.fileName}: {fr.message || fr.error}</span>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -394,7 +414,7 @@ export default function AdminPage() {
             </li>
             <li className="flex gap-2">
               <span className="text-sage-400 shrink-0">-</span>
-              Upload .txt files with notes, articles, or any text content to add more context.
+              Upload multiple .txt files at once with notes, articles, or any text content.
             </li>
           </ul>
         </div>
