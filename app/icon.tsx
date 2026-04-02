@@ -8,8 +8,7 @@ export default function Icon() {
     (
       <div
         style={{
-          fontSize: 24,
-          background: '#0f0f0f',
+          background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%)',
           width: '100%',
           height: '100%',
           display: 'flex',
@@ -18,7 +17,17 @@ export default function Icon() {
           borderRadius: 6,
         }}
       >
-        ð®
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 700,
+            color: '#86efac',
+            fontFamily: 'sans-serif',
+            letterSpacing: '-1px',
+          }}
+        >
+          S
+        </div>
       </div>
     ),
     { ...size }
