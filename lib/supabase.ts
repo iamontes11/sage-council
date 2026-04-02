@@ -122,10 +122,10 @@ export async function searchTranscriptChunks(
   creatorId: string,
   query: string,
   limit: number = 5
-): Promise<{ content: string; video_title: string }[]> {
+): Promise<{ chunk_text: string; video_title: string }[]> {
   const { data, error } = await supabaseAdmin
     .from("transcript_chunks")
-    .select("content, video_title")
+    .select("chunk_text, video_title")
     .eq("creator_id", creatorId)
     .textSearch("search_vector", query, { type: "websearch", config: "english" })
     .limit(limit);
