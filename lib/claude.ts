@@ -31,7 +31,7 @@ async function buildFrameworkContext(userMessage: string): Promise<string> {
     try {
       const chunks = await searchTranscriptChunks(fw.id, userMessage, 3);
       if (chunks.length > 0) {
-        const text = chunks.map((c) => c.content).join(' ').substring(0, 600);
+        const text = chunks.map((c) => c.chunk_text).join(' ').substring(0, 600);
         sections.push(`[${fw.name} -- ${fw.role}] ${text}`);
       }
     } catch {
@@ -43,11 +43,11 @@ async function buildFrameworkContext(userMessage: string): Promise<string> {
 
 function formatCreatorContext(
   creator: (typeof CREATORS)[number],
-  chunks: Array<{ content: string; video_title: string }>
+  chunks: Array<{ chunk_text: string; video_title: string }>
 ): string {
   if (chunks.length === 0) return '';
   const excerpts = chunks
-    .map((c) => c.content)
+    .map((c) => c.chunk_text)
     .join(' ')
     .substring(0, 800);
   return `[${creator.name}] ${creator.systemPrompt}\nRelevant wisdom from transcripts: ${excerpts}`;
