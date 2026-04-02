@@ -98,7 +98,6 @@ export async function getChatMessages(chatId: string): Promise<Message[]> {
   return messages || [];
 }
 
-
 export async function saveTranscriptChunks(
   creatorId: string,
   videoId: string,
@@ -114,7 +113,7 @@ export async function saveTranscriptChunks(
   }));
   const { error } = await supabaseAdmin
     .from("transcript_chunks")
-          .insert(rows);
+    .insert(rows);
   if (error) throw error;
 }
 
@@ -143,6 +142,7 @@ export async function getTranscriptStats() {
 
   if (sourceError) throw sourceError;
 
+  // Build source counts per creator
   const creatorSources: Record<string, Set<string>> = {};
   for (const row of sourceRows || []) {
     if (!creatorSources[row.creator_id]) {
