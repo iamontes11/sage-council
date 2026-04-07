@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { ingestVideoTranscript, ingestRawTranscript, ingestTextFile } from '@/lib/transcripts';
 import { getTranscriptStats } from '@/lib/supabase';
+
+// Never cache this route — stats must always be fresh
+export const dynamic = 'force-dynamic';
 import { CREATORS } from '@/lib/creators';
 
 function isAdmin(email: string | null | undefined): boolean {

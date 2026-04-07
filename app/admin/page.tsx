@@ -68,7 +68,8 @@ export default function AdminPage() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('/api/ingest');
+      // cache: 'no-store' + timestamp param = always fresh, never cached
+      const res = await fetch(`/api/ingest?t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       // Only update stats if the fetch returned valid data — never reset to []
       if (Array.isArray(data.stats)) {
@@ -107,7 +108,8 @@ export default function AdminPage() {
       if (data.success) {
         setVideoUrl('');
         setVideoTitle('');
-        fetchStats();
+        // small delay so DB write is visible before re-fetching stats
+        setTimeout(fetchStats, 800);
       }
     } catch {
       setYtResult({ success: false, error: 'Network error' });
@@ -172,7 +174,8 @@ export default function AdminPage() {
     // Clear staged files only if all succeeded
     if (results.every((r) => r.success)) setStagedFiles([]);
 
-    fetchStats();
+    // small delay so DB writes are visible before re-fetching stats
+    setTimeout(fetchStats, 800);
     setIngestLoading(false);
   };
 
