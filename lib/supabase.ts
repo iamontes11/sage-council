@@ -143,9 +143,9 @@ export async function searchTranscriptChunks(
 }
 
 export async function getTranscriptStats() {
-  // Query the transcript_stats view directly — simple, no RPC needed
+  // Read from the pre-computed cache table — always instant, never times out
   const { data, error } = await supabaseAdmin
-    .from('transcript_stats')
+    .from('transcript_stats_cache')
     .select('creator_id, chunk_count, video_count');
 
   if (error) {
