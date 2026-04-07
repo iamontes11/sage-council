@@ -16,13 +16,8 @@ function isAdmin(email: string | null | undefined): boolean {
   return !!email;
 }
 
-// GET /api/ingest — get transcript stats
+// GET /api/ingest — get transcript stats (no auth required; stats are not sensitive)
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!isAdmin(session?.user?.email)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const stats = await getTranscriptStats();
     return NextResponse.json({ stats, creators: CREATORS });
