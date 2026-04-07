@@ -45,9 +45,11 @@ export default function LandingPage() {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.1, duration: 0.4, ease: 'easeOut' }}
-            className="text-6xl"
+            className="flex justify-center gap-2"
           >
-            ð®
+            <VoxelAvatar creatorId="rick-rubin" size={40} />
+            <VoxelAvatar creatorId="jay-shetty" size={40} />
+            <VoxelAvatar creatorId="mark-manson" size={40} />
           </motion.div>
           <h1 className="text-5xl font-bold text-white tracking-tight">
             Sage Council

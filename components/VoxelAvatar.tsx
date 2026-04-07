@@ -11,7 +11,7 @@ interface VoxelProps {
   className?: string;
 }
 
-interface CharDef {
+export interface CharDef {
   skin: string;
   hair: string;
   body: string;
@@ -23,7 +23,7 @@ interface CharDef {
   mouthType?: 'smile' | 'flat' | 'smirk' | 'open';
 }
 
-const CHARS: Record<string, CharDef> = {
+export const CHARS: Record<string, CharDef> = {
   'mark-manson': {
     skin: '#C68642', hair: '#2C1B0E', body: '#C0392B',
     pants: '#2C2C2C', eyes: '#1a1a1a', accent: '#8B0000',
@@ -86,7 +86,7 @@ const CHARS: Record<string, CharDef> = {
   },
 };
 
-const DEFAULT_CHAR: CharDef = {
+export const DEFAULT_CHAR: CharDef = {
   skin: '#F5CBA7', hair: '#2C1B0E', body: '#7F8C8D',
   pants: '#2C2C2C', eyes: '#1a1a1a', accent: '#BDC3C7',
   accessory: 'none', mouthType: 'flat',

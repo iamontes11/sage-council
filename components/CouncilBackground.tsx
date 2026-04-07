@@ -1,32 +1,18 @@
 'use client';
 import { useEffect, useRef } from 'react';
+import { CREATORS } from '@/lib/creators';
+import { CHARS, DEFAULT_CHAR } from '@/components/VoxelAvatar';
+import type { CharDef } from '@/components/VoxelAvatar';
 
-// \u2500\u2500 12 knights of the round table \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-const KNIGHTS = [
-  { name: 'Mark Manson',     emoji: '🪨', color: '#A07850', robe: '#6B4C2A' },
-  { name: 'Derek Sivers',    emoji: '🚢', color: '#C86060', robe: '#8B2525' },
-  { name: 'Steven Bartlett', emoji: '🚀', color: '#5080D8', robe: '#1E3A8A' },
-  { name: 'theMITmonk',      emoji: '\u26A1', color: '#E8C030', robe: '#7A6010' },
-  { name: 'Prof. Jiang',     emoji: '🔬', color: '#38C880', robe: '#1A5E3A' },
-  { name: 'Jett Franzen',    emoji: '🎭', color: '#C045C8', robe: '#6A0E70' },
-  { name: 'Jason Pargin',    emoji: '🔍', color: '#909090', robe: '#404040' },
-  { name: 'Jay Shetty',      emoji: '🧘', color: '#38A8D8', robe: '#184A6A' },
-  { name: 'Luke Belmar',     emoji: '🔥', color: '#FF5E1A', robe: '#8B1A00' },
-  { name: 'Chase Hughes',    emoji: '🧠', color: '#D878D8', robe: '#6A286A' },
-  { name: 'Orion Taraban',   emoji: '💡', color: '#E8D820', robe: '#8A7A00' },
-  { name: 'Rick Rubin',      emoji: '🎨', color: '#8870D8', robe: '#3A2478' },
-] as const;
-
-const STONE_DARK   = '#141210';
-const STONE_MID    = '#1E1A17';
-const STONE_LIGHT  = '#2A2420';
-const WALL_COLOR   = '#0E0C0A';
-const FLOOR_A      = '#1A1714';
-const FLOOR_B      = '#201D1A';
-const TABLE_WOOD   = '#5C3D1E';
-const TABLE_FELT   = '#1A4A2E';
-const TABLE_GOLD   = '#C9A84C';
-const SKIN         = '#F5CBA7';
+const STONE_DARK  = '#141210';
+const STONE_MID   = '#1E1A17';
+const STONE_LIGHT = '#2A2420';
+const WALL_COLOR  = '#0E0C0A';
+const FLOOR_A     = '#1A1714';
+const FLOOR_B     = '#201D1A';
+const TABLE_WOOD  = '#5C3D1E';
+const TABLE_FELT  = '#1A4A2E';
+const TABLE_GOLD  = '#C9A84C';
 
 interface Agent {
   sx: number; sy: number;
@@ -35,19 +21,18 @@ interface Agent {
   tx: number; ty: number;
   seated: boolean;
   blinkT: number; dotPhase: number; workPhase: number;
-  color: string; robe: string; emoji: string;
+  char: CharDef;
 }
 
 export default function CouncilBackground({ active = false }: { active?: boolean }) {
-  const canvasRef  = useRef<HTMLCanvasElement>(null);
-  const activeRef  = useRef(active);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const activeRef = useRef(active);
   useEffect(() => { activeRef.current = active; }, [active]);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
 
-    // \u2500\u2500 Canvas dimensions (updated on resize) \u2500\u2500
     let W = window.innerWidth;
     let H = window.innerHeight;
     canvas.width  = W;
@@ -61,7 +46,6 @@ export default function CouncilBackground({ active = false }: { active?: boolean
     };
     window.addEventListener('resize', onResize);
 
-    // \u2500\u2500 Derived helpers \u2500\u2500
     const cx   = () => W / 2;
     const cy   = () => H / 2;
     const tblR = () => Math.min(W, H) * 0.16;
@@ -75,8 +59,8 @@ export default function CouncilBackground({ active = false }: { active?: boolean
     const rnd   = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
     const seatAngle = (i: number) => -Math.PI / 2 + (i / 12) * Math.PI * 2;
 
-    // \u2500\u2500 Agents \u2500\u2500
-    const agents: Agent[] = KNIGHTS.map((k, i) => {
+    // ── Agents ──────────────────────────────────────────────────────────────
+    const agents: Agent[] = CREATORS.slice(0, 12).map((c, i) => {
       const ang = seatAngle(i);
       const sr  = seatR();
       const sx  = cx() + Math.cos(ang) * sr;
@@ -91,13 +75,11 @@ export default function CouncilBackground({ active = false }: { active?: boolean
         blinkT:    Math.random() * 4000,
         dotPhase:  Math.random() * Math.PI * 2,
         workPhase: Math.random() * Math.PI * 2,
-        color: k.color,
-        robe:  k.robe,
-        emoji: k.emoji,
+        char: CHARS[c.id] || DEFAULT_CHAR,
       };
     });
 
-    // \u2500\u2500 Particles (torch fire) \u2500\u2500
+    // ── Particles (torch fire) ──────────────────────────────────────────────
     interface Particle { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; color: string }
     const particles: Particle[] = [];
 
@@ -111,7 +93,6 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       });
     };
 
-    // Torch positions (updated each frame to follow canvas size)
     const torches = [
       { x: PAD + 18, y: PAD + 18 },
       { x: W - PAD - 18, y: PAD + 18 },
@@ -119,13 +100,11 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       { x: W - PAD - 18, y: H - PAD - 18 },
     ];
 
-    // \u2500\u2500 Draw: room \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    // ── Draw: room ──────────────────────────────────────────────────────────
     function drawRoom(t: number) {
-      // Solid backdrop
       ctx.fillStyle = STONE_DARK;
       ctx.fillRect(0, 0, W, H);
 
-      // Floor tiles
       const ts = 52;
       for (let r = PAD; r < H - PAD; r += ts) {
         for (let c = PAD; c < W - PAD; c += ts) {
@@ -134,14 +113,12 @@ export default function CouncilBackground({ active = false }: { active?: boolean
         }
       }
 
-      // Stone border wall
       ctx.fillStyle = WALL_COLOR;
       ctx.fillRect(0, 0, W, PAD);
       ctx.fillRect(0, H - PAD, W, PAD);
       ctx.fillRect(0, 0, PAD, H);
       ctx.fillRect(W - PAD, 0, PAD, H);
 
-      // Wall brickwork lines (horizontal)
       ctx.strokeStyle = STONE_LIGHT;
       ctx.lineWidth = 1;
       for (let y2 = 0; y2 < H; y2 += 20) {
@@ -153,22 +130,18 @@ export default function CouncilBackground({ active = false }: { active?: boolean
         ctx.beginPath(); ctx.moveTo(x2, H - PAD); ctx.lineTo(x2, H); ctx.stroke();
       }
 
-      // Arched windows (left & right walls) \u2014 decorative rectangles
       const winH = 80, winW = 28;
       const winYs = [H * 0.3, H * 0.65];
       for (const wy of winYs) {
-        // Left wall
         ctx.fillStyle = '#0A1828';
         ctx.fillRect(2, wy - winH / 2, winW - 2, winH);
         ctx.strokeStyle = '#4A6080';
         ctx.lineWidth = 2;
         ctx.strokeRect(2, wy - winH / 2, winW - 2, winH);
-        // Right wall
         ctx.fillStyle = '#0A1828';
         ctx.fillRect(W - winW, wy - winH / 2, winW - 2, winH);
         ctx.strokeStyle = '#4A6080';
         ctx.strokeRect(W - winW, wy - winH / 2, winW - 2, winH);
-        // Soft moonlight glow from window
         const gL = ctx.createRadialGradient(PAD + 10, wy, 0, PAD + 10, wy, 90);
         gL.addColorStop(0, 'rgba(100,130,200,0.07)');
         gL.addColorStop(1, 'rgba(0,0,0,0)');
@@ -176,28 +149,21 @@ export default function CouncilBackground({ active = false }: { active?: boolean
         ctx.fillRect(PAD, wy - 90, 180, 180);
       }
 
-      // Update torch positions
       torches[0] = { x: PAD + 18, y: PAD + 18 };
       torches[1] = { x: W - PAD - 18, y: PAD + 18 };
       torches[2] = { x: PAD + 18, y: H - PAD - 18 };
       torches[3] = { x: W - PAD - 18, y: H - PAD - 18 };
 
-      // Torches
       for (const tr of torches) {
-        // Warm ambient glow
         const glow = ctx.createRadialGradient(tr.x, tr.y, 0, tr.x, tr.y, 110);
         glow.addColorStop(0, 'rgba(255,140,0,0.14)');
         glow.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = glow;
         ctx.fillRect(tr.x - 110, tr.y - 110, 220, 220);
-
-        // Torch bracket
         ctx.fillStyle = '#3A2010';
         ctx.fillRect(tr.x - 3, tr.y + 2, 6, 16);
         ctx.fillStyle = '#6A4020';
         ctx.fillRect(tr.x - 5, tr.y, 10, 5);
-
-        // Flame layers
         const flk = Math.sin(t * 9 + tr.x * 0.1) * 2.5;
         ctx.fillStyle = '#FF8C00';
         ctx.beginPath();
@@ -213,12 +179,11 @@ export default function CouncilBackground({ active = false }: { active?: boolean
         ctx.ellipse(tr.x, tr.y - 5, 1.5, 2.5, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
-
         if (Math.random() < 0.35) spawnFire(tr.x, tr.y - 6);
       }
     }
 
-    // \u2500\u2500 Draw: particles \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    // ── Draw: particles ─────────────────────────────────────────────────────
     function drawParticles() {
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
@@ -236,29 +201,21 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       }
     }
 
-    // \u2500\u2500 Draw: round table \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    // ── Draw: round table ───────────────────────────────────────────────────
     function drawTable(t: number) {
       const ccx = cx(), ccy = cy(), tr = tblR();
-
-      // Drop shadow
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
       ctx.beginPath();
       ctx.ellipse(ccx + 8, ccy + 12, tr, tr * 0.28, 0, 0, Math.PI * 2);
       ctx.fill();
-
-      // Table rim
       ctx.fillStyle = TABLE_WOOD;
       ctx.beginPath();
       ctx.arc(ccx, ccy, tr, 0, Math.PI * 2);
       ctx.fill();
-
-      // Felt surface
       ctx.fillStyle = TABLE_FELT;
       ctx.beginPath();
       ctx.arc(ccx, ccy, tr - 9, 0, Math.PI * 2);
       ctx.fill();
-
-      // Wood grain lines
       ctx.strokeStyle = 'rgba(0,0,0,0.2)';
       ctx.lineWidth = 1;
       for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
@@ -267,8 +224,6 @@ export default function CouncilBackground({ active = false }: { active?: boolean
         ctx.lineTo(ccx + Math.cos(a) * (tr - 9), ccy + Math.sin(a) * (tr - 9));
         ctx.stroke();
       }
-
-      // Gold rim ring
       ctx.strokeStyle = TABLE_GOLD;
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -279,8 +234,6 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       ctx.beginPath();
       ctx.arc(ccx, ccy, tr - 11, 0, Math.PI * 2);
       ctx.stroke();
-
-      // Chair markers (12 seat indicators around table)
       const sr = seatR();
       for (let i = 0; i < 12; i++) {
         const ang = seatAngle(i);
@@ -296,8 +249,6 @@ export default function CouncilBackground({ active = false }: { active?: boolean
         ctx.arc(sx, sy, 11, 0, Math.PI * 2);
         ctx.stroke();
       }
-
-      // Pulsing centre emblem \u269C
       const pulse = 0.82 + 0.18 * Math.sin(t * 1.4);
       ctx.globalAlpha = pulse * 0.55;
       ctx.fillStyle = TABLE_GOLD;
@@ -308,76 +259,135 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       ctx.globalAlpha = 1;
     }
 
-    // \u2500\u2500 Draw: single agent \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    // ── Draw: voxel agent ───────────────────────────────────────────────────
     function drawAgent(a: Agent, t: number) {
-      const { x, y, seated, blinkT, dotPhase, workPhase, color, robe, emoji } = a;
-      const bW = 13, bH = 19;
+      const { x, y, seated, dotPhase, workPhase, char } = a;
+      const sz = 28;
+      const s  = sz / 32;
 
-      // Ground shadow
+      // anchor: y = waist (body center ≈ y-coord 20 in VoxelAvatar 0-40 grid)
+      const ox = Math.round(x - 16 * s);
+      const oy = Math.round(y - 20 * s);
+
+      // pixel helper
+      const px = (rx: number, ry: number, rw: number, rh: number) =>
+        ctx.fillRect(
+          ox + Math.round(rx * s),
+          oy + Math.round(ry * s),
+          Math.max(1, Math.round(rw * s)),
+          Math.max(1, Math.round(rh * s))
+        );
+
+      // shadow
       ctx.fillStyle = 'rgba(0,0,0,0.28)';
       ctx.beginPath();
-      ctx.ellipse(x, y + bH / 2 + 3, 8, 3, 0, 0, Math.PI * 2);
+      ctx.ellipse(x, oy + Math.round(39 * s), Math.round(10 * s), Math.max(1, Math.round(2 * s)), 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Lower robe
-      ctx.fillStyle = robe;
-      ctx.beginPath();
-      ctx.roundRect(x - bW / 2, y, bW, bH / 2, [0, 0, 5, 5]);
-      ctx.fill();
+      // legs
+      ctx.fillStyle = char.pants;
+      px(7, 27, 8, 9);
+      px(17, 27, 8, 9);
+      // shoes
+      ctx.fillStyle = '#1a1008';
+      px(7, 36, 8, 2);
+      px(17, 36, 8, 2);
 
-      // Upper body
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.roundRect(x - bW / 2, y - bH / 2, bW, bH / 2 + 1, [5, 5, 0, 0]);
-      ctx.fill();
+      // arms
+      ctx.fillStyle = char.body;
+      px(2, 15, 5, 10);
+      px(25, 15, 5, 10);
 
-      // Robe highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.08)';
-      ctx.beginPath();
-      ctx.roundRect(x - bW / 2 + 2, y - bH / 2 + 2, 4, bH / 2 - 4, [3, 0, 0, 0]);
-      ctx.fill();
-
-      // Head
-      ctx.fillStyle = SKIN;
-      ctx.beginPath();
-      ctx.arc(x, y - bH / 2 - 7, 8, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Eyes (with blink)
-      const blink = ((t * 1000 + blinkT) % 3800) < 130;
-      const eyeH  = blink ? 0.4 : 2;
-      ctx.fillStyle = '#1A0800';
-      ctx.fillRect(x - 3.5, y - bH / 2 - 9, 2, eyeH);
-      ctx.fillRect(x + 1.5, y - bH / 2 - 9, 2, eyeH);
-
-      // Emoji badge (11px, drawn over head area)
-      ctx.font = '11px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(emoji, x, y - bH / 2 - 7);
-
-      // Arms working (seated + active)
+      // working arms when seated + active
       if (seated && activeRef.current) {
         const armAng = Math.sin(t * 3.2 + workPhase) * 0.45;
-        ctx.strokeStyle = SKIN;
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = char.skin;
+        ctx.lineWidth = Math.max(1, s * 2);
         ctx.beginPath();
-        ctx.moveTo(x - 5, y - 3);
-        ctx.lineTo(x - 5 + Math.cos(armAng) * 9, y + Math.sin(armAng) * 5);
+        ctx.moveTo(x - Math.round(5 * s), y + Math.round(2 * s));
+        ctx.lineTo(x - Math.round(5 * s) + Math.cos(armAng) * 9, y + Math.round(2 * s) + Math.sin(armAng) * 5);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(x + 5, y - 3);
-        ctx.lineTo(x + 5 + Math.cos(-armAng) * 9, y + Math.sin(-armAng) * 5);
+        ctx.moveTo(x + Math.round(5 * s), y + Math.round(2 * s));
+        ctx.lineTo(x + Math.round(5 * s) + Math.cos(-armAng) * 9, y + Math.round(2 * s) + Math.sin(-armAng) * 5);
         ctx.stroke();
       }
 
-      // Thinking dots (active mode)
+      // body
+      ctx.fillStyle = char.body;
+      px(7, 15, 18, 11);
+      // body highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      px(7, 15, 2, 11);
+      // accent stripe
+      if (char.accent) {
+        ctx.fillStyle = char.accent;
+        ctx.globalAlpha = 0.5;
+        px(9, 16, 14, 2);
+        ctx.globalAlpha = 1;
+      }
+
+      // neck
+      ctx.fillStyle = char.skin;
+      px(13, 14, 6, 2);
+
+      // head
+      ctx.fillStyle = char.skin;
+      px(6, 0, 20, 14);
+      // head highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      px(6, 0, 2, 14);
+
+      // hair top
+      ctx.fillStyle = char.hair;
+      px(6, 0, 20, 4);
+      px(6, 4, 2, 8);
+      px(24, 4, 2, 8);
+
+      // blink
+      const blink = ((t * 1000 + a.blinkT) % 3800) < 130;
+      const eyeH  = blink ? 0.5 : 2;
+      ctx.fillStyle = char.eyes;
+      px(10, 6, 3, eyeH);
+      px(19, 6, 3, eyeH);
+      // eye shine
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      px(12, 6, 1, 1);
+      px(21, 6, 1, 1);
+
+      // mouth
+      ctx.fillStyle = '#1a1a1a';
+      ctx.globalAlpha = 0.7;
+      px(10, 11, 6, 1);
+      ctx.globalAlpha = 1;
+
+      // accessories
+      if (char.accessory === 'glasses') {
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = Math.max(1, s * 0.9);
+        ctx.strokeRect(ox + Math.round(9*s), oy + Math.round(5*s), Math.round(5*s), Math.round(4*s));
+        ctx.strokeRect(ox + Math.round(18*s), oy + Math.round(5*s), Math.round(5*s), Math.round(4*s));
+        ctx.fillStyle = '#1a1a1a';
+        px(14, 6, 4, 1);
+      }
+      if (char.accessory === 'beard') {
+        ctx.fillStyle = char.beardColor || '#D5D5D5';
+        px(8, 12, 16, 3);
+        px(7, 10, 3, 4);
+        px(22, 10, 3, 4);
+      }
+      if (char.accessory === 'headband') {
+        ctx.fillStyle = '#E74C3C';
+        px(6, 4, 20, 2);
+      }
+
+      // thinking dots when active
       if (activeRef.current) {
         for (let d = 0; d < 3; d++) {
-          const dph = (t * 4 + dotPhase + d * 0.65) % (Math.PI * 2);
-          const dy2 = y - bH / 2 - 20 - Math.abs(Math.sin(dph)) * 6;
+          const dph  = (t * 4 + dotPhase + d * 0.65) % (Math.PI * 2);
+          const dy2  = oy - Math.abs(Math.sin(dph)) * 6;
           ctx.globalAlpha = 0.35 + 0.65 * Math.abs(Math.sin(dph));
-          ctx.fillStyle = color;
+          ctx.fillStyle   = char.body;
           ctx.beginPath();
           ctx.arc(x - 4 + d * 4, dy2, 2.2, 0, Math.PI * 2);
           ctx.fill();
@@ -386,7 +396,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       }
     }
 
-    // \u2500\u2500 Update: agent movement \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    // ── Update: agent movement ──────────────────────────────────────────────
     function updateAgents(dt: number) {
       const active = activeRef.current;
       const ccx = cx(), ccy = cy(), tr = tblR(), sr = seatR();
@@ -406,7 +416,6 @@ export default function CouncilBackground({ active = false }: { active?: boolean
           a.tx = a.x; a.ty = a.y;
         } else {
           a.seated = false;
-          // Pick new wander target when close
           if (dist(a.x, a.y, a.tx, a.ty) < 7) {
             const ra  = rnd(0, Math.PI * 2);
             const r2  = rnd(50, Math.min(W, H) * 0.38);
@@ -419,7 +428,6 @@ export default function CouncilBackground({ active = false }: { active?: boolean
             a.vx = lerp(a.vx, (dx / dl) * speed, 0.08);
             a.vy = lerp(a.vy, (dy / dl) * speed, 0.08);
           }
-          // Avoid table
           const td = dist(a.x + a.vx, a.y + a.vy, ccx, ccy);
           if (td < tr + 22) {
             const aa = Math.atan2(a.y - ccy, a.x - ccx);
@@ -432,7 +440,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       }
     }
 
-    // \u2500\u2500 Main loop \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    // ── Main loop ───────────────────────────────────────────────────────────
     const t0 = performance.now();
     let prev = t0;
     let rafId = 0;
@@ -443,19 +451,16 @@ export default function CouncilBackground({ active = false }: { active?: boolean
       const t = (now - t0) / 1000;
 
       ctx.clearRect(0, 0, W, H);
-
       drawRoom(t);
       drawParticles();
       drawTable(t);
 
-      // Sort agents by Y so front ones overdraw back ones
       const sorted = agents
         .map((a, i) => ({ a, i }))
         .sort((p, q) => p.a.y - q.a.y);
       for (const { a } of sorted) drawAgent(a, t);
 
       updateAgents(dt);
-
       rafId = requestAnimationFrame(frame);
     }
 
@@ -477,6 +482,7 @@ export default function CouncilBackground({ active = false }: { active?: boolean
         height: '100%',
         zIndex: 0,
         pointerEvents: 'none',
+        imageRendering: 'pixelated',
         display: 'block',
       }}
     />

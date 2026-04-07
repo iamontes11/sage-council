@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { CREATORS } from '@/lib/creators';
+import { VoxelAvatar } from '@/components/VoxelAvatar';
 
 export default function NewChatPage() {
   const { data: session } = useSession();
@@ -44,7 +45,11 @@ export default function NewChatPage() {
         transition={{ duration: 0.4 }}
         className="text-center space-y-4 mb-10"
       >
-        <div className="text-5xl mb-1">ð®</div>
+        <div className="flex justify-center gap-2 mb-1">
+          <VoxelAvatar creatorId="rick-rubin" size={32} />
+          <VoxelAvatar creatorId="jay-shetty" size={32} />
+          <VoxelAvatar creatorId="mark-manson" size={32} />
+        </div>
         <h1 className="text-3xl font-bold text-white tracking-tight">
           The Sage Council awaits
         </h1>
@@ -68,9 +73,9 @@ export default function NewChatPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 + i * 0.03, duration: 0.25 }}
-            className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-3 py-1.5 hover:bg-white/[0.08] hover:border-white/[0.15] transition-all cursor-default"
+            className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.08] rounded-full px-2.5 py-1 hover:bg-white/[0.08] hover:border-white/[0.15] transition-all cursor-default"
           >
-            <span>{c.emoji}</span>
+            <VoxelAvatar creatorId={c.id} size={20} />
             <span className="text-xs text-neutral-300 font-medium">
               {c.name}
             </span>

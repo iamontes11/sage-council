@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import Image from 'next/image';
+import { VoxelAvatar } from '@/components/VoxelAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -173,7 +174,7 @@ export function Sidebar({ user }: SidebarProps) {
       <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sage-600/20 to-sage-600/5 border border-sage-600/20 flex items-center justify-center">
-            <span className="text-lg">ð®</span>
+            <VoxelAvatar creatorId="rick-rubin" size={28} />
           </div>
           <div>
             <h1 className="text-white font-semibold text-sm leading-tight">
