@@ -1,5 +1,5 @@
 import { YoutubeTranscript } from 'youtube-transcript';
-import { saveTranscriptChunks } from './supabase';
+import { saveTranscriptChunks, sourceExistsForCreator } from './supabase';
 
 /** Extract a YouTube video ID from a URL or raw ID */
 export function extractVideoId(input: string): string | null {
@@ -39,9 +39,12 @@ export async function ingestVideoTranscript(
   creatorId: string,
   videoInput: string,
   videoTitle?: string,
-): Promise<{ videoId: string; chunks: number }> {
+): Promise<{ videoId: string; chunks: number; skipped?: boolean }> {
   const videoId = extractVideoId(videoInput);
   if (!videoId) throw new Error(`Could not extract video ID from: ${videoInput}`);
+
+  const alreadyExists = await sourceExistsForCreator(creatorId, videoId);
+  if (alreadyExists) return { videoId, chunks: 0, skipped: true };
 
   const transcriptItems = await YoutubeTranscript.fetchTranscript(videoId, {
     lang: 'en',
@@ -116,12 +119,18 @@ export async function ingestTextFile(
   creatorId: string,
   fileName: string,
   textContent: string,
-): Promise<{ fileId: string; chunks: number }> {
+): Promise<{ fileId: string; chunks: number; skipped?: boolean }> {
   if (!textContent || textContent.trim().length === 0) {
     throw new Error('File content is empty');
   }
 
-  const fileId = 'txt-' + Date.now().toString(36);
+  // Stable fileId based on creatorId + normalized filename — enables duplicate detection
+  const normalizedName = fileName.toLowerCase().replace(/[^a-z0-9.]/g, '-');
+  const fileId = `txt-${creatorId}-${normalizedName}`;
+
+  const alreadyExists = await sourceExistsForCreator(creatorId, fileId);
+  if (alreadyExists) return { fileId, chunks: 0, skipped: true };
+
   const textChunks = chunkText(textContent, 350, 50);
 
   await saveTranscriptChunks(

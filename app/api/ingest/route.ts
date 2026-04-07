@@ -13,7 +13,7 @@ function isAdmin(email: string | null | undefined): boolean {
   return !!email;
 }
 
-// GET /api/ingest â get transcript stats
+// GET /api/ingest — get transcript stats
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!isAdmin(session?.user?.email)) {
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/ingest â ingest transcript
+// POST /api/ingest — ingest transcript
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!isAdmin(session?.user?.email)) {
@@ -51,23 +51,40 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    let result;
-
     if (fileName && transcript) {
-      // Text file upload â no video URL needed
-      result = await ingestTextFile(creatorId, fileName, transcript);
+      // Text file upload — no video URL needed
+      const result = await ingestTextFile(creatorId, fileName, transcript);
+      if (result.skipped) {
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          fileId: result.fileId,
+          chunks: 0,
+          message: `"${fileName}" ya existe para ${creator.name} — omitido`,
+        });
+      }
       return NextResponse.json({
         success: true,
         fileId: result.fileId,
         chunks: result.chunks,
-        message: `Successfully ingested ${result.chunks} chunks from "${fileName}" for ${creator.name}`,
+        message: `${result.chunks} chunks ingested from "${fileName}" → ${creator.name}`,
       });
-    } else if (transcript) {
-      // Use provided transcript text directly
+    }
+
+    let result;
+    if (transcript) {
       result = await ingestRawTranscript(creatorId, videoUrl, transcript, videoTitle);
     } else {
-      // Try to fetch from YouTube
       result = await ingestVideoTranscript(creatorId, videoUrl, videoTitle);
+    }
+
+    if (result.skipped) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        chunks: 0,
+        message: `Video ya existe para ${creator.name} — omitido`,
+      });
     }
 
     return NextResponse.json({
@@ -77,11 +94,12 @@ export async function POST(req: NextRequest) {
       message: `Successfully ingested ${result.chunks} chunks for ${creator.name}`,
     });
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'message' in err ? String((err as any).message) : 'Unknown error');
+    const errorMessage = err instanceof Error
+      ? err.message
+      : (typeof err === 'object' && err !== null && 'message' in err
+          ? String((err as Record<string, unknown>).message)
+          : 'Unknown error');
     console.error('Ingest error:', errorMessage);
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

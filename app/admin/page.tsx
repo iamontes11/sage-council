@@ -17,6 +17,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { CREATORS } from '@/lib/creators';
+import { VoxelAvatar } from '@/components/VoxelAvatar';
 
 interface TranscriptStat {
   creatorId: string;
@@ -218,16 +219,18 @@ export default function AdminPage() {
             return (
               <div
                 key={c.id}
-                className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                className={`p-3 rounded-xl border cursor-pointer transition-all flex flex-col items-center text-center ${
                   selectedCreator === c.id
                     ? 'border-sage-400/50 bg-sage-400/10'
                     : 'border-white/10 bg-white/5 hover:border-white/20'
                 }`}
                 onClick={() => setSelectedCreator(c.id)}
               >
-                <div className="text-lg mb-1">{c.emoji}</div>
-                <div className="text-white text-sm font-medium">{c.name}</div>
-                <div className="text-neutral-500 text-xs">
+                <div className="mb-1">
+                  <VoxelAvatar creatorId={c.id} size={40} />
+                </div>
+                <div className="text-white text-xs font-medium leading-tight">{c.name}</div>
+                <div className="text-neutral-500 text-xs mt-0.5">
                   {statsLoading
                     ? '...'
                     : `${stat?.chunks ?? 0} chunks · ${stat?.videos ?? 0} fuentes`}

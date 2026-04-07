@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CREATORS } from '@/lib/creators';
+import { VoxelAvatar } from '@/components/VoxelAvatar';
 
 export default function LandingPage() {
   const { data: session, status } = useSession();
@@ -74,11 +75,11 @@ export default function LandingPage() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3 + i * 0.03, duration: 0.25 }}
-              className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.07] hover:border-white/[0.15] transition-all duration-200 cursor-default group"
+              className="flex flex-col items-center gap-2 py-3 px-2 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.07] hover:border-white/[0.15] transition-all duration-200 cursor-default group"
             >
-              <span className="text-2xl group-hover:scale-110 transition-transform">
-                {creator.emoji}
-              </span>
+              <div className="group-hover:scale-110 transition-transform">
+                <VoxelAvatar creatorId={creator.id} size={48} />
+              </div>
               <span className="text-xs text-neutral-300 font-medium text-center leading-tight">
                 {creator.name}
               </span>

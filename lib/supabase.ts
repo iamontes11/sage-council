@@ -98,6 +98,16 @@ export async function getChatMessages(chatId: string): Promise<Message[]> {
   return messages || [];
 }
 
+/** Returns true if this video_id already has chunks for this creator (duplicate check) */
+export async function sourceExistsForCreator(creatorId: string, videoId: string): Promise<boolean> {
+  const { count, error } = await supabaseAdmin
+    .from("transcript_chunks")
+    .select("*", { count: "exact", head: true })
+    .eq("creator_id", creatorId)
+    .eq("video_id", videoId);
+  return !error && (count || 0) > 0;
+}
+
 export async function saveTranscriptChunks(
   creatorId: string,
   videoId: string,
