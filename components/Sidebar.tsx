@@ -12,7 +12,6 @@ import {
   Archive,
   Trash2,
   LogOut,
-  ChevronDown,
   ChevronRight,
   Settings,
   PanelLeftClose,
@@ -64,7 +63,7 @@ export function Sidebar({ user }: SidebarProps) {
       const res = await fetch('/api/chats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'New Conversation' }),
+        body: JSON.stringify({ title: 'Nueva consulta' }),
       });
       const { chat } = await res.json();
       router.push(`/chat/${chat.id}`);
@@ -82,18 +81,18 @@ export function Sidebar({ user }: SidebarProps) {
       body: JSON.stringify({ archived: true }),
     });
     setChats((prev) => prev.filter((c) => c.id !== chatId));
-    toast('Conversation archived', 'info');
+    toast('Conversación archivada', 'info');
     if (pathname === `/chat/${chatId}`) router.push('/chat');
   };
 
   const handleDelete = async (e: React.MouseEvent, chatId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm('Permanently delete this conversation?')) return;
+    if (!confirm('¿Eliminar esta conversación permanentemente?')) return;
     await fetch(`/api/chats/${chatId}`, { method: 'DELETE' });
     setChats((prev) => prev.filter((c) => c.id !== chatId));
     setArchivedChats((prev) => prev.filter((c) => c.id !== chatId));
-    toast('Conversation deleted', 'info');
+    toast('Conversación eliminada', 'info');
     if (pathname === `/chat/${chatId}`) router.push('/chat');
   };
 
@@ -127,7 +126,7 @@ export function Sidebar({ user }: SidebarProps) {
             <button
               onClick={(e) => handleArchive(e, chat.id)}
               className="p-1.5 hover:text-white hover:bg-white/10 rounded-lg opacity-60 hover:opacity-100 transition-all"
-              data-tooltip="Archive"
+              title="Archivar"
             >
               <Archive size={12} />
             </button>
@@ -135,7 +134,7 @@ export function Sidebar({ user }: SidebarProps) {
           <button
             onClick={(e) => handleDelete(e, chat.id)}
             className="p-1.5 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-60 hover:opacity-100 transition-all"
-            data-tooltip="Delete"
+            title="Eliminar"
           >
             <Trash2 size={12} />
           </button>
@@ -144,14 +143,14 @@ export function Sidebar({ user }: SidebarProps) {
     );
   };
 
-  /* ââ Collapsed mini-sidebar ââââââââââââââââââââââââ */
+  /* ── Collapsed mini-sidebar ─────────────────────────────────── */
   if (collapsed) {
     return (
       <div className="w-14 shrink-0 flex flex-col items-center py-4 gap-3 bg-[#111] border-r border-white/[0.06] h-full">
         <button
           onClick={() => setCollapsed(false)}
           className="p-2 rounded-lg text-neutral-500 hover:text-white hover:bg-white/5 transition-all"
-          data-tooltip="Expand sidebar"
+          title="Expandir"
         >
           <PanelLeftOpen size={18} />
         </button>
@@ -159,7 +158,7 @@ export function Sidebar({ user }: SidebarProps) {
         <button
           onClick={handleNewChat}
           className="p-2 rounded-lg bg-sage-600 hover:bg-sage-500 text-white transition-colors"
-          data-tooltip="New chat"
+          title="Nueva consulta"
         >
           <Plus size={16} />
         </button>
@@ -167,28 +166,29 @@ export function Sidebar({ user }: SidebarProps) {
     );
   }
 
-  /* ââ Full sidebar ââââââââââââââââââââââââââââââââââ */
+  /* ── Full sidebar ───────────────────────────────────────────── */
   return (
     <div className="w-[280px] shrink-0 flex flex-col bg-[#111] border-r border-white/[0.06] h-full">
       {/* Logo + collapse */}
       <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sage-600/20 to-sage-600/5 border border-sage-600/20 flex items-center justify-center">
-            <VoxelAvatar creatorId="rick-rubin" size={28} />
+          {/* Crystal ball icon */}
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-900/40 to-indigo-950/60 border border-violet-500/20 flex items-center justify-center text-lg">
+            🔮
           </div>
           <div>
             <h1 className="text-white font-semibold text-sm leading-tight">
               Sage Council
             </h1>
             <p className="text-neutral-600 text-[11px]">
-              12 minds, 1 best answer
+              12 mentes, 1 respuesta
             </p>
           </div>
         </div>
         <button
           onClick={() => setCollapsed(true)}
           className="p-1.5 rounded-lg text-neutral-600 hover:text-neutral-300 hover:bg-white/5 transition-all"
-          data-tooltip="Collapse"
+          title="Colapsar"
         >
           <PanelLeftClose size={16} />
         </button>
@@ -201,7 +201,7 @@ export function Sidebar({ user }: SidebarProps) {
           className="btn btn-primary w-full gap-2 py-2.5 rounded-xl text-sm"
         >
           <Plus size={16} />
-          New Conversation
+          Nueva consulta
         </button>
       </div>
 
@@ -219,16 +219,13 @@ export function Sidebar({ user }: SidebarProps) {
           </div>
         ) : chats.length === 0 ? (
           <div className="px-3 py-8 text-center text-neutral-600 text-sm">
-            <MessageSquare
-              size={24}
-              className="mx-auto mb-2 opacity-30"
-            />
-            No conversations yet
+            <MessageSquare size={24} className="mx-auto mb-2 opacity-30" />
+            Aún no hay consultas
           </div>
         ) : (
           <div className="space-y-0.5">
             <p className="px-3 py-2 text-[11px] text-neutral-600 uppercase tracking-wider font-semibold">
-              Conversations
+              Consultas
             </p>
             <AnimatePresence>
               {chats.map((chat) => (
@@ -252,7 +249,7 @@ export function Sidebar({ user }: SidebarProps) {
                 <ChevronRight size={12} />
               </motion.div>
               <Archive size={12} />
-              Archived ({archivedChats.length})
+              Archivadas ({archivedChats.length})
             </button>
             <AnimatePresence>
               {showArchived && (
@@ -280,7 +277,7 @@ export function Sidebar({ user }: SidebarProps) {
           className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-neutral-500 hover:text-neutral-300 hover:bg-white/[0.04] rounded-xl transition-all"
         >
           <Settings size={13} />
-          Manage Transcripts
+          Gestionar Transcripts
         </button>
         <div
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] group cursor-pointer transition-all"
@@ -289,7 +286,7 @@ export function Sidebar({ user }: SidebarProps) {
           {user?.image ? (
             <Image
               src={user.image}
-              alt={user.name || 'User'}
+              alt={user.name || 'Usuario'}
               width={28}
               height={28}
               className="rounded-full ring-2 ring-white/10"

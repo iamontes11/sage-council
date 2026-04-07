@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChoiceCard } from './ChoiceCard';
 import CouncilThinking from './CouncilThinking';
-import { toast } from './Toast';
 import type { Message, CouncilResponse } from '@/types';
 
 interface ChatWindowProps {
@@ -18,7 +17,7 @@ interface ChatWindowProps {
   onClearError: () => void;
 }
 
-/* ââ Burbuja del usuario âââââââââââââââââââââââââââ */
+/* ── Burbuja del usuario ─────────────────────────────────────── */
 function UserBubble({ content }: { content: string }) {
   return (
     <motion.div
@@ -34,7 +33,7 @@ function UserBubble({ content }: { content: string }) {
   );
 }
 
-/* ââ Respuesta del Consejo âââââââââââââââââââââââââ */
+/* ── Respuesta del Consejo ───────────────────────────────────── */
 function CouncilBubble({ response }: { response: CouncilResponse }) {
   return (
     <motion.div
@@ -43,14 +42,14 @@ function CouncilBubble({ response }: { response: CouncilResponse }) {
       transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
       className="space-y-5"
     >
-      {/* Encabezado del Consejo */}
+      {/* Encabezado */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sage-600/20 to-sage-600/5 border border-sage-600/20 flex items-center justify-center text-xl">
-          ð®
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-900/40 to-indigo-950/60 border border-violet-500/20 flex items-center justify-center text-xl">
+          🔮
         </div>
         <div>
           <p className="text-white font-semibold text-sm">El Consejo Sabio</p>
-          <p className="text-neutral-500 text-xs">1 best answer</p>
+          <p className="text-neutral-500 text-xs">1 mejor respuesta</p>
         </div>
       </div>
 
@@ -65,7 +64,7 @@ function CouncilBubble({ response }: { response: CouncilResponse }) {
           <div className="flex items-center gap-2 mb-2.5">
             <Sparkles size={12} className="text-sage-400/60" />
             <span className="text-xs text-sage-400/60 uppercase tracking-wider font-semibold">
-              VisiÃ³n del Consejo
+              Vision del Consejo
             </span>
           </div>
           <p className="text-neutral-300 text-sm leading-relaxed italic">
@@ -74,7 +73,7 @@ function CouncilBubble({ response }: { response: CouncilResponse }) {
         </motion.div>
       )}
 
-      {/* Tarjetas de opciones con escalonado */}
+      {/* Tarjetas */}
       <div className="grid grid-cols-1 gap-4">
         {response.choices?.map((choice, i) => (
           <motion.div
@@ -91,7 +90,7 @@ function CouncilBubble({ response }: { response: CouncilResponse }) {
   );
 }
 
-/* ââ Esqueleto de carga ââââââââââââââââââââââââââââ */
+/* ── Esqueleto de carga ──────────────────────────────────────── */
 function ThinkingSkeleton() {
   return (
     <motion.div
@@ -101,7 +100,7 @@ function ThinkingSkeleton() {
     >
       <div className="flex items-center gap-3 mb-2">
         <div className="w-10 h-10 rounded-xl bg-white/5 animate-pulse flex items-center justify-center text-xl">
-          ð®
+          🔮
         </div>
         <div className="space-y-1.5">
           <div className="skeleton h-3.5 w-28 rounded" />
@@ -109,20 +108,12 @@ function ThinkingSkeleton() {
         </div>
       </div>
       <div className="skeleton h-24 w-full rounded-xl" />
-      <div className="space-y-3">
-        {[0].map((i) => (
-          <div
-            key={i}
-            className="skeleton h-32 w-full rounded-xl"
-            style={{ animationDelay: `${i * 0.15}s` }}
-          />
-        ))}
-      </div>
+      <div className="skeleton h-32 w-full rounded-xl" />
     </motion.div>
   );
 }
 
-/* ââ ChatWindow principal ââââââââââââââââââââââââââ */
+/* ── ChatWindow principal ────────────────────────────────────── */
 export function ChatWindow({
   messages,
   loading,
@@ -165,11 +156,11 @@ export function ChatWindow({
 
   return (
     <div className="flex flex-col h-full">
-      {/* ââ Barra superior ââââââââââââââââââââââââ */}
+      {/* ── Barra superior ───────────────────────────────────── */}
       <div className="shrink-0 flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] bg-[#0f0f0f]/80 backdrop-blur-md">
         <button
-          onClick={() => router.push('/')}
-          data-tooltip="Ir al inicio"
+          onClick={() => router.push('/chat')}
+          title="Nueva consulta"
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-neutral-400 hover:text-white hover:bg-white/5 transition-all text-sm group"
         >
           <Home size={15} className="group-hover:scale-110 transition-transform" />
@@ -177,14 +168,14 @@ export function ChatWindow({
         </button>
         <div className="flex-1" />
         <div className="flex items-center gap-2.5 text-neutral-500 text-xs">
-          <div className="w-6 h-6 rounded-lg bg-sage-600/10 flex items-center justify-center">
-            <span className="text-sm">ð®</span>
+          <div className="w-6 h-6 rounded-lg bg-violet-900/30 border border-violet-500/15 flex items-center justify-center">
+            <span className="text-sm">🔮</span>
           </div>
           <span className="hidden sm:inline font-medium">Sage Council</span>
         </div>
       </div>
 
-      {/* ââ Mensajes âââââââââââââââââââââââââââââââ */}
+      {/* ── Mensajes ─────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-5 py-8 space-y-8">
           {messages.length === 0 && !thinking ? (
@@ -194,12 +185,12 @@ export function ChatWindow({
               transition={{ duration: 0.4 }}
               className="text-center py-20 space-y-4"
             >
-              <div className="text-5xl mb-2">ð®</div>
+              <div className="text-5xl mb-2">🔮</div>
               <p className="text-neutral-400 text-sm font-medium">
-                Trae al Consejo una decisiÃ³n, un reto o una pregunta.
+                Trae al Consejo una decision, un reto o una pregunta.
               </p>
               <p className="text-neutral-600 text-xs max-w-sm mx-auto leading-relaxed">
-                RecibirÃ¡s la mejor respuesta, destilada de 12 pensadores distintos.
+                Recibiras la mejor respuesta, destilada de 12 pensadores distintos.
               </p>
             </motion.div>
           ) : (
@@ -234,7 +225,7 @@ export function ChatWindow({
         </div>
       </div>
 
-      {/* ââ Banner de error ââââââââââââââââââââââââ */}
+      {/* ── Banner de error ───────────────────────────────────── */}
       <AnimatePresence>
         {error && (
           <motion.div
@@ -257,7 +248,7 @@ export function ChatWindow({
         )}
       </AnimatePresence>
 
-      {/* ââ Barra de entrada ââââââââââââââââââââââ */}
+      {/* ── Barra de entrada ──────────────────────────────────── */}
       <div className="border-t border-white/[0.06] bg-[#0f0f0f]/80 backdrop-blur-md p-4">
         <form
           onSubmit={handleSubmit}
@@ -268,7 +259,7 @@ export function ChatWindow({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="PregÃºntale al Consejo lo que quieras..."
+            placeholder="Preguntale al Consejo lo que quieras..."
             rows={1}
             className="flex-1 bg-transparent text-neutral-100 placeholder-neutral-600 text-sm resize-none outline-none leading-relaxed"
             disabled={thinking}

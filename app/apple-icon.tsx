@@ -17,16 +17,55 @@ export default function AppleIcon() {
           borderRadius: 36,
         }}
       >
+        {/* Crystal ball */}
         <div
           style={{
-            fontSize: 96,
-            fontWeight: 700,
-            color: '#86efac',
-            fontFamily: 'sans-serif',
-            letterSpacing: '-4px',
+            width: 120,
+            height: 120,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 38% 32%, #7c3aed, #2e1065)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
           }}
         >
-          S
+          {/* Main highlight */}
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.40)',
+              position: 'absolute',
+              top: 22,
+              left: 26,
+            }}
+          />
+          {/* Small shine */}
+          <div
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.65)',
+              position: 'absolute',
+              top: 28,
+              left: 32,
+            }}
+          />
+          {/* Bottom glow */}
+          <div
+            style={{
+              width: 60,
+              height: 20,
+              borderRadius: '50%',
+              background: 'rgba(139,92,246,0.25)',
+              position: 'absolute',
+              bottom: 16,
+              left: 30,
+            }}
+          />
         </div>
       </div>
     ),

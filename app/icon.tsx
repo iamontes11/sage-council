@@ -17,16 +17,31 @@ export default function Icon() {
           borderRadius: 6,
         }}
       >
+        {/* Crystal ball */}
         <div
           style={{
-            fontSize: 18,
-            fontWeight: 700,
-            color: '#86efac',
-            fontFamily: 'sans-serif',
-            letterSpacing: '-1px',
+            width: 22,
+            height: 22,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 38% 32%, #7c3aed, #2e1065)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
           }}
         >
-          S
+          {/* Highlight */}
+          <div
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.45)',
+              position: 'absolute',
+              top: 4,
+              left: 5,
+            }}
+          />
         </div>
       </div>
     ),
