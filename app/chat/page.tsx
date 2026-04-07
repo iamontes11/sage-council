@@ -1,13 +1,9 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { VoxelAvatar } from '@/components/VoxelAvatar';
-import { CREATORS } from '@/lib/creators';
 
 export default function NewChatPage() {
-  const { data: session } = useSession();
   const router = useRouter();
 
   const handleStart = async () => {
@@ -21,81 +17,74 @@ export default function NewChatPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 max-w-3xl mx-auto w-full">
-      {/* Header */}
+    <div className="flex-1 flex flex-col items-center justify-between px-6 py-16 w-full relative overflow-hidden">
+
+      {/* Top: title */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="text-center space-y-3 mb-10"
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        className="text-center space-y-2 z-10"
       >
-        <h1 className="text-3xl font-bold text-white tracking-tight">
+        <h1 className="text-2xl font-semibold text-white/90 tracking-wide">
           El Consejo te escucha
         </h1>
-        <p className="text-neutral-400 text-sm max-w-lg mx-auto leading-relaxed">
-          Plantea tu pregunta, decisión o problema. Recibirás una respuesta
-          destilada de las mejores mentes.
+        <p className="text-neutral-500 text-sm max-w-sm mx-auto leading-relaxed">
+          Plantea tu pregunta, decisión o problema.
         </p>
       </motion.div>
 
-      {/* Creator avatars — no names */}
+      {/* Bottom: crystal ball */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.15, duration: 0.4 }}
-        className="flex flex-wrap justify-center gap-1.5 mb-12"
-      >
-        {CREATORS.map((c, i) => (
-          <motion.div
-            key={c.id}
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 + i * 0.03, duration: 0.2 }}
-            className="w-9 h-9 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center hover:bg-white/[0.08] transition-all"
-            title={c.name}
-          >
-            <VoxelAvatar creatorId={c.id} size={24} />
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {/* Crystal ball CTA */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35, duration: 0.4 }}
-        className="flex flex-col items-center"
+        transition={{ delay: 0.3, duration: 0.7, ease: 'easeOut' }}
+        className="flex flex-col items-center gap-4 z-10 mb-4"
       >
         <motion.button
           onClick={handleStart}
-          whileHover={{ scale: 1.06 }}
+          whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.96 }}
-          className="group relative flex flex-col items-center gap-5 focus:outline-none"
+          className="group relative flex flex-col items-center gap-3 focus:outline-none"
         >
-          {/* Ambient glow */}
-          <div className="absolute rounded-full blur-3xl bg-violet-600/15 group-hover:bg-violet-600/30 transition-all duration-700 w-48 h-48 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+          {/* Glow pulse ring */}
+          <motion.div
+            animate={{ scale: [1, 1.15, 1], opacity: [0.15, 0.08, 0.15] }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute rounded-full bg-violet-500 w-28 h-28 blur-2xl pointer-events-none"
+          />
 
           {/* Ball */}
-          <div className="relative w-40 h-40">
-            {/* Outer shell */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-violet-950 via-indigo-950 to-purple-950 border border-violet-500/20 shadow-[0_0_60px_rgba(139,92,246,0.12)] group-hover:shadow-[0_0_90px_rgba(139,92,246,0.28)] transition-all duration-500" />
-            {/* Inner gradient shimmer */}
-            <div className="absolute inset-2 rounded-full bg-gradient-to-br from-violet-700/15 via-transparent to-transparent" />
-            {/* Highlight 1 */}
-            <div className="absolute top-6 left-9 w-7 h-7 rounded-full bg-white/[0.07] blur-md" />
-            {/* Highlight 2 */}
-            <div className="absolute top-9 left-11 w-3.5 h-3.5 rounded-full bg-white/[0.18]" />
-            {/* Micro sparkle */}
-            <div className="absolute bottom-10 right-9 w-2 h-2 rounded-full bg-violet-300/25" />
-            {/* Bottom depth */}
-            <div className="absolute bottom-4 inset-x-8 h-6 rounded-full bg-violet-900/30 blur-lg" />
+          <div className="relative w-20 h-20">
+            {/* Base sphere */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#2a1a4e] via-[#1e1040] to-[#0d0820] border border-violet-400/15 shadow-[0_0_40px_rgba(139,92,246,0.18),inset_0_0_30px_rgba(109,40,217,0.12)] group-hover:shadow-[0_0_60px_rgba(139,92,246,0.32),inset_0_0_30px_rgba(109,40,217,0.18)] transition-all duration-700" />
+
+            {/* Inner depth layer */}
+            <div className="absolute inset-[3px] rounded-full bg-gradient-to-br from-violet-900/20 via-transparent to-indigo-950/40" />
+
+            {/* Primary highlight — soft */}
+            <div className="absolute top-[14%] left-[22%] w-[38%] h-[28%] rounded-full bg-white/[0.08] blur-[6px]" />
+
+            {/* Sharp specular dot */}
+            <div className="absolute top-[20%] left-[28%] w-[16%] h-[14%] rounded-full bg-white/[0.55] blur-[1.5px]" />
+
+            {/* Secondary micro sparkle */}
+            <div className="absolute top-[28%] left-[35%] w-[7%] h-[7%] rounded-full bg-white/90" />
+
+            {/* Bottom inner glow */}
+            <div className="absolute bottom-[12%] left-1/2 -translate-x-1/2 w-[55%] h-[20%] rounded-full bg-violet-600/15 blur-md" />
+
+            {/* Rim light */}
+            <div className="absolute inset-0 rounded-full shadow-[inset_0_-4px_12px_rgba(139,92,246,0.15)]" />
           </div>
 
-          <span className="text-neutral-300 text-base font-medium group-hover:text-white transition-colors duration-200 tracking-wide">
+          {/* Label */}
+          <span className="text-[13px] text-neutral-400 font-medium tracking-widest uppercase group-hover:text-white/80 transition-colors duration-300">
             Haz tu consulta
           </span>
         </motion.button>
       </motion.div>
+
     </div>
   );
 }
