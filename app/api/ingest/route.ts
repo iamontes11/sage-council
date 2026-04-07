@@ -27,8 +27,10 @@ export async function GET(req: NextRequest) {
     const stats = await getTranscriptStats();
     return NextResponse.json({ stats, creators: CREATORS });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : JSON.stringify(err);
+    console.error('[GET /api/ingest] stats error:', msg);
     return NextResponse.json(
-      { error: 'Failed to fetch stats' },
+      { error: 'Failed to fetch stats', detail: msg },
       { status: 500 },
     );
   }

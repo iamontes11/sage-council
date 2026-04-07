@@ -143,9 +143,15 @@ export async function searchTranscriptChunks(
 }
 
 export async function getTranscriptStats() {
-  // Single aggregation query via RPC — reliable, one round trip
-  const { data, error } = await supabaseAdmin.rpc('get_transcript_stats');
-  if (error) throw error;
+  // Query the transcript_stats view directly — simple, no RPC needed
+  const { data, error } = await supabaseAdmin
+    .from('transcript_stats')
+    .select('creator_id, chunk_count, video_count');
+
+  if (error) {
+    console.error('[getTranscriptStats] Supabase error:', JSON.stringify(error));
+    throw error;
+  }
 
   return (data || []).map((row: { creator_id: string; chunk_count: number; video_count: number }) => ({
     creatorId: row.creator_id,

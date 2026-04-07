@@ -27,6 +27,7 @@ interface TranscriptStat {
 
 interface IngestResult {
   success: boolean;
+  skipped?: boolean;
   message?: string;
   error?: string;
   chunks?: number;
@@ -421,7 +422,9 @@ export default function AdminPage() {
                       <div
                         key={`${file.name}-${i}`}
                         className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm border ${
-                          result?.success
+                          result?.skipped
+                            ? 'bg-yellow-500/10 border-yellow-500/20'
+                            : result?.success
                             ? 'bg-green-500/10 border-green-500/20'
                             : result && !result.success
                             ? 'bg-red-500/10 border-red-500/20'
@@ -431,7 +434,9 @@ export default function AdminPage() {
                         <FileText
                           size={14}
                           className={
-                            result?.success
+                            result?.skipped
+                              ? 'text-yellow-400 shrink-0'
+                              : result?.success
                               ? 'text-green-400 shrink-0'
                               : result && !result.success
                               ? 'text-red-400 shrink-0'
@@ -440,7 +445,10 @@ export default function AdminPage() {
                         />
                         <span className="flex-1 text-neutral-300 truncate">{file.name}</span>
                         <span className="text-neutral-600 text-xs shrink-0">{formatBytes(file.size)}</span>
-                        {result?.success && (
+                        {result?.skipped && (
+                          <span className="text-yellow-400 text-xs shrink-0">ya existe</span>
+                        )}
+                        {result?.success && !result.skipped && (
                           <CheckCircle size={14} className="text-green-400 shrink-0" />
                         )}
                         {result && !result.success && (
