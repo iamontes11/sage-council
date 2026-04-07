@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
-  Plus,
   Upload,
   CheckCircle,
   XCircle,
@@ -13,6 +12,9 @@ import {
   Youtube,
   Database,
   FileText,
+  X,
+  Plus,
+  FolderOpen,
 } from 'lucide-react';
 import { CREATORS } from '@/lib/creators';
 
@@ -27,55 +29,68 @@ interface IngestResult {
   message?: string;
   error?: string;
   chunks?: number;
+  fileName?: string;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+
+  // Shared
   const [selectedCreator, setSelectedCreator] = useState(CREATORS[0]?.id || '');
-  const [videoUrl, setVideoUrl] = useState('');
-  const [videoTitle, setVideoTitle] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<IngestResult | null>(null);
   const [stats, setStats] = useState<TranscriptStat[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'youtube' | 'file'>('youtube');
-  const [fileResults, setFileResults] = useState<(IngestResult & { fileName?: string })[]>([]);
-  const [fileLoading, setFileLoading] = useState(false);
-  const [fileProgress, setFileProgress] = useState('');
+
+  // YouTube tab
+  const [videoUrl, setVideoUrl] = useState('');
+  const [videoTitle, setVideoTitle] = useState('');
+  const [ytLoading, setYtLoading] = useState(false);
+  const [ytResult, setYtResult] = useState<IngestResult | null>(null);
+
+  // File tab — staged files + results
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [ingestLoading, setIngestLoading] = useState(false);
+  const [ingestProgress, setIngestProgress] = useState('');
+  const [ingestResults, setIngestResults] = useState<IngestResult[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/');
-    }
+    if (status === 'unauthenticated') router.push('/');
   }, [status, router]);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await fetch('/api/ingest');
-        const data = await res.json();
-        setStats(data.stats || []);
-      } catch {
-        // ignore
-      } finally {
-        setStatsLoading(false);
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('/api/ingest');
+      const data = await res.json();
+      // Only update stats if the fetch returned valid data — never reset to []
+      if (Array.isArray(data.stats)) {
+        setStats(data.stats);
       }
-    };
-    fetchStats();
-  }, []);
+    } catch {
+      // ignore — keep previous stats intact
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchStats(); }, []);
 
   const getStatForCreator = (creatorId: string) =>
     stats.find((s) => s.creatorId === creatorId);
 
-  const handleIngest = async (e: React.FormEvent) => {
+  // ── YouTube ingest ────────────────────────────────────────────
+  const handleYoutubeIngest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!videoUrl.trim() || loading) return;
-
-    setLoading(true);
-    setResult(null);
-
+    if (!videoUrl.trim() || ytLoading) return;
+    setYtLoading(true);
+    setYtResult(null);
     try {
       const res = await fetch('/api/ingest', {
         method: 'POST',
@@ -86,39 +101,54 @@ export default function AdminPage() {
           videoTitle: videoTitle.trim() || undefined,
         }),
       });
-
       const data = await res.json();
-      setResult(data);
-
+      setYtResult(data);
       if (data.success) {
         setVideoUrl('');
         setVideoTitle('');
-        const statsRes = await fetch('/api/ingest');
-        const statsData = await statsRes.json();
-        setStats(statsData.stats || []);
+        fetchStats();
       }
-    } catch (err) {
-      setResult({ success: false, error: 'Network error' });
+    } catch {
+      setYtResult({ success: false, error: 'Network error' });
     } finally {
-      setLoading(false);
+      setYtLoading(false);
     }
   };
 
-  const handleFileUpload = async () => {
-    const files = fileInputRef.current?.files;
-    if (!files || files.length === 0 || fileLoading) return;
+  // ── File staging: pick files without ingesting yet ───────────
+  const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    if (picked.length === 0) return;
+    setStagedFiles((prev) => {
+      const existing = new Set(prev.map((f) => `${f.name}-${f.size}`));
+      const newOnes = picked.filter((f) => !existing.has(`${f.name}-${f.size}`));
+      return [...prev, ...newOnes];
+    });
+    // Reset so the same file can be re-picked after removal
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
-    setFileLoading(true);
-    setFileResults([]);
-    const results: (IngestResult & { fileName?: string })[] = [];
+  const removeStagedFile = (index: number) => {
+    setStagedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      setFileProgress(`Uploading ${i + 1} of ${files.length}: ${file.name}`);
+  const clearAll = () => {
+    setStagedFiles([]);
+    setIngestResults([]);
+  };
 
+  // ── Ingest all staged files ───────────────────────────────────
+  const handleIngest = async () => {
+    if (stagedFiles.length === 0 || ingestLoading) return;
+    setIngestLoading(true);
+    setIngestResults([]);
+    const results: IngestResult[] = [];
+
+    for (let i = 0; i < stagedFiles.length; i++) {
+      const file = stagedFiles[i];
+      setIngestProgress(`Procesando ${i + 1} de ${stagedFiles.length}: ${file.name}`);
       try {
         const text = await file.text();
-
         const res = await fetch('/api/ingest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -128,22 +158,21 @@ export default function AdminPage() {
             transcript: text,
           }),
         });
-
         const data = await res.json();
         results.push({ ...data, fileName: file.name });
-      } catch (err) {
-        results.push({ success: false, error: 'Network error', fileName: file.name });
+      } catch {
+        results.push({ success: false, error: 'Error de red', fileName: file.name });
       }
     }
 
-    setFileResults(results);
-    setFileProgress('');
+    setIngestResults(results);
+    setIngestProgress('');
 
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    const statsRes = await fetch('/api/ingest');
-    const statsData = await statsRes.json();
-    setStats(statsData.stats || []);
-    setFileLoading(false);
+    // Clear staged files only if all succeeded
+    if (results.every((r) => r.success)) setStagedFiles([]);
+
+    fetchStats();
+    setIngestLoading(false);
   };
 
   if (status === 'loading') {
@@ -154,9 +183,13 @@ export default function AdminPage() {
     );
   }
 
+  const successCount = ingestResults.filter((r) => r.success).length;
+  const failCount = ingestResults.filter((r) => !r.success).length;
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] p-8">
       <div className="max-w-4xl mx-auto space-y-8">
+
         {/* Header */}
         <div className="flex items-center gap-4">
           <button
@@ -164,7 +197,7 @@ export default function AdminPage() {
             className="flex items-center gap-2 text-neutral-500 hover:text-neutral-300 transition-colors text-sm"
           >
             <ArrowLeft size={16} />
-            Back to chat
+            Volver al chat
           </button>
         </div>
 
@@ -173,8 +206,8 @@ export default function AdminPage() {
             <Database size={24} className="text-sage-400" />
             <h1 className="text-2xl font-bold text-white">Transcript Library</h1>
           </div>
-          <p className="text-neutral-400">
-            Feed your council members with YouTube videos or text files to deepen their wisdom.
+          <p className="text-neutral-400 text-sm">
+            Alimenta a los council members con videos de YouTube o archivos de texto para profundizar su sabiduría.
           </p>
         </div>
 
@@ -195,7 +228,9 @@ export default function AdminPage() {
                 <div className="text-lg mb-1">{c.emoji}</div>
                 <div className="text-white text-sm font-medium">{c.name}</div>
                 <div className="text-neutral-500 text-xs">
-                  {statsLoading ? '...' : `${stat?.chunks || 0} chunks Â· ${stat?.videos || 0} sources`}
+                  {statsLoading
+                    ? '...'
+                    : `${stat?.chunks ?? 0} chunks · ${stat?.videos ?? 0} fuentes`}
                 </div>
               </div>
             );
@@ -224,19 +259,19 @@ export default function AdminPage() {
             }`}
           >
             <FileText size={16} />
-            Upload .txt Files
+            Archivos .txt
           </button>
         </div>
 
-        {/* YouTube ingest form */}
+        {/* ── YouTube tab ─────────────────────────────────────── */}
         {activeTab === 'youtube' && (
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
             <div className="flex items-center gap-3">
               <Youtube size={20} className="text-red-400" />
-              <h2 className="text-white font-semibold">Add YouTube Video</h2>
+              <h2 className="text-white font-semibold">Agregar video de YouTube</h2>
             </div>
 
-            <form onSubmit={handleIngest} className="space-y-4">
+            <form onSubmit={handleYoutubeIngest} className="space-y-4">
               <div>
                 <label className="block text-xs text-neutral-500 uppercase tracking-wider font-medium mb-2">
                   Council Member
@@ -269,61 +304,62 @@ export default function AdminPage() {
 
               <div>
                 <label className="block text-xs text-neutral-500 uppercase tracking-wider font-medium mb-2">
-                  Video Title (optional)
+                  Título del video (opcional)
                 </label>
                 <input
                   type="text"
                   value={videoTitle}
                   onChange={(e) => setVideoTitle(e.target.value)}
-                  placeholder="Leave blank to use video ID"
+                  placeholder="Dejar en blanco para usar el ID del video"
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-sage-400/50"
                 />
               </div>
 
-              {result && (
+              {ytResult && (
                 <div
                   className={`flex items-start gap-3 px-4 py-3 rounded-xl text-sm border ${
-                    result.success
+                    ytResult.success
                       ? 'bg-green-500/10 border-green-500/20 text-green-400'
                       : 'bg-red-500/10 border-red-500/20 text-red-400'
                   }`}
                 >
-                  {result.success ? (
+                  {ytResult.success ? (
                     <CheckCircle size={16} className="shrink-0 mt-0.5" />
                   ) : (
                     <XCircle size={16} className="shrink-0 mt-0.5" />
                   )}
-                  <span>{result.message || result.error}</span>
+                  <span>{ytResult.message || ytResult.error}</span>
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={loading || !videoUrl.trim()}
+                disabled={ytLoading || !videoUrl.trim()}
                 className="w-full flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-xl px-4 py-3 text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {loading ? (
+                {ytLoading ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
                   <Plus size={16} />
                 )}
-                {loading ? 'Ingesting...' : 'Ingest Transcript'}
+                {ytLoading ? 'Ingesting...' : 'Ingestar transcript'}
               </button>
             </form>
           </div>
         )}
 
-        {/* File upload form */}
+        {/* ── File tab ─────────────────────────────────────────── */}
         {activeTab === 'file' && (
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-5">
             <div className="flex items-center gap-3">
               <Upload size={20} className="text-sage-400" />
-              <h2 className="text-white font-semibold">Upload Text Files</h2>
+              <h2 className="text-white font-semibold">Subir archivos de texto</h2>
             </div>
 
+            {/* Creator selector */}
             <div>
               <label className="block text-xs text-neutral-500 uppercase tracking-wider font-medium mb-2">
-                Council Member
+                Council Member destino
               </label>
               <select
                 value={selectedCreator}
@@ -338,86 +374,155 @@ export default function AdminPage() {
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs text-neutral-500 uppercase tracking-wider font-medium mb-2">
-                Text Files (.txt)
-              </label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".txt"
-                multiple
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-sage-400/20 file:text-sage-400 hover:file:bg-sage-400/30 focus:outline-none focus:border-sage-400/50"
-              />
-              <p className="text-neutral-500 text-xs mt-1">Select multiple files at once. No file size limit.</p>
-            </div>
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt"
+              multiple
+              className="hidden"
+              onChange={handleFilePick}
+            />
 
-            {fileProgress && (
+            {/* STEP 1: Load button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={ingestLoading}
+              className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-neutral-300 border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <FolderOpen size={16} />
+              Seleccionar archivos .txt
+            </button>
+
+            {/* Staged files list */}
+            {stagedFiles.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-neutral-500 uppercase tracking-wider font-medium">
+                    {stagedFiles.length} archivo{stagedFiles.length !== 1 ? 's' : ''} seleccionado{stagedFiles.length !== 1 ? 's' : ''}
+                  </p>
+                  <button
+                    onClick={clearAll}
+                    className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+                  >
+                    Limpiar todo
+                  </button>
+                </div>
+                <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                  {stagedFiles.map((file, i) => {
+                    const result = ingestResults.find((r) => r.fileName === file.name);
+                    return (
+                      <div
+                        key={`${file.name}-${i}`}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm border ${
+                          result?.success
+                            ? 'bg-green-500/10 border-green-500/20'
+                            : result && !result.success
+                            ? 'bg-red-500/10 border-red-500/20'
+                            : 'bg-white/[0.03] border-white/[0.08]'
+                        }`}
+                      >
+                        <FileText
+                          size={14}
+                          className={
+                            result?.success
+                              ? 'text-green-400 shrink-0'
+                              : result && !result.success
+                              ? 'text-red-400 shrink-0'
+                              : 'text-neutral-500 shrink-0'
+                          }
+                        />
+                        <span className="flex-1 text-neutral-300 truncate">{file.name}</span>
+                        <span className="text-neutral-600 text-xs shrink-0">{formatBytes(file.size)}</span>
+                        {result?.success && (
+                          <CheckCircle size={14} className="text-green-400 shrink-0" />
+                        )}
+                        {result && !result.success && (
+                          <span className="text-red-400 text-xs shrink-0 max-w-32 truncate">{result.error}</span>
+                        )}
+                        {!result && !ingestLoading && (
+                          <button
+                            onClick={() => removeStagedFile(i)}
+                            className="text-neutral-700 hover:text-neutral-400 transition-colors shrink-0"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Progress indicator */}
+            {ingestProgress && (
               <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm border bg-blue-500/10 border-blue-500/20 text-blue-400">
                 <Loader2 size={16} className="animate-spin shrink-0" />
-                <span>{fileProgress}</span>
+                <span>{ingestProgress}</span>
               </div>
             )}
 
-            {fileResults.length > 0 && (
-              <div className="space-y-2">
-                {fileResults.map((fr, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-start gap-3 px-4 py-3 rounded-xl text-sm border ${
-                      fr.success
-                        ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                        : 'bg-red-500/10 border-red-500/20 text-red-400'
-                    }`}
-                  >
-                    {fr.success ? (
-                      <CheckCircle size={16} className="shrink-0 mt-0.5" />
-                    ) : (
-                      <XCircle size={16} className="shrink-0 mt-0.5" />
-                    )}
-                    <span>{fr.fileName}: {fr.message || fr.error}</span>
-                  </div>
-                ))}
+            {/* Summary banner after ingest */}
+            {ingestResults.length > 0 && !ingestLoading && (
+              <div className={`px-4 py-3 rounded-xl text-sm border ${
+                failCount === 0
+                  ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                  : successCount === 0
+                  ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                  : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+              }`}>
+                {failCount === 0
+                  ? `✓ ${successCount} archivo${successCount !== 1 ? 's' : ''} ingesta${successCount !== 1 ? 'dos' : 'do'} correctamente`
+                  : successCount === 0
+                  ? `✗ Todos los archivos fallaron`
+                  : `${successCount} exitoso${successCount !== 1 ? 's' : ''}, ${failCount} fallido${failCount !== 1 ? 's' : ''}`}
               </div>
             )}
 
+            {/* STEP 2: Ingest button */}
             <button
-              onClick={handleFileUpload}
-              disabled={fileLoading}
+              onClick={handleIngest}
+              disabled={stagedFiles.length === 0 || ingestLoading}
               className="w-full flex items-center justify-center gap-2 bg-sage-400/20 hover:bg-sage-400/30 text-sage-400 border border-sage-400/30 rounded-xl px-4 py-3 text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {fileLoading ? (
+              {ingestLoading ? (
                 <Loader2 size={16} className="animate-spin" />
               ) : (
                 <Upload size={16} />
               )}
-              {fileLoading ? 'Uploading...' : 'Upload & Ingest'}
+              {ingestLoading
+                ? 'Ingesting...'
+                : stagedFiles.length === 0
+                ? 'Selecciona archivos primero'
+                : `Ingestar ${stagedFiles.length} archivo${stagedFiles.length !== 1 ? 's' : ''}`}
             </button>
           </div>
         )}
 
         {/* Tips */}
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
-          <h3 className="text-white font-semibold text-sm">Tips for best results</h3>
+          <h3 className="text-white font-semibold text-sm">Tips para mejores resultados</h3>
           <ul className="space-y-2 text-sm text-neutral-400">
             <li className="flex gap-2">
-              <span className="text-sage-400 shrink-0">-</span>
-              Add 5-15 videos per creator for rich context. More = better responses.
+              <span className="text-sage-400 shrink-0">—</span>
+              Agrega 5–15 videos por creator para contexto rico. Más = mejores respuestas.
             </li>
             <li className="flex gap-2">
-              <span className="text-sage-400 shrink-0">-</span>
-              Long-form videos (30min+) give the most insight. Avoid trailers or shorts.
+              <span className="text-sage-400 shrink-0">—</span>
+              Videos largos (30min+) dan más insight. Evita trailers o shorts.
             </li>
             <li className="flex gap-2">
-              <span className="text-sage-400 shrink-0">-</span>
-              Videos need English captions (auto-generated counts). Transcripts load within seconds.
+              <span className="text-sage-400 shrink-0">—</span>
+              Los videos necesitan subtítulos en inglés (los auto-generados cuentan).
             </li>
             <li className="flex gap-2">
-              <span className="text-sage-400 shrink-0">-</span>
-              Upload multiple .txt files at once with notes, articles, or any text content.
+              <span className="text-sage-400 shrink-0">—</span>
+              Selecciona múltiples .txt, revisa la lista y luego haz clic en Ingestar.
             </li>
           </ul>
         </div>
+
       </div>
     </div>
   );
