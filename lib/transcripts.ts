@@ -73,7 +73,7 @@ export async function ingestRawTranscript(
   videoInput: string,
   transcriptText: string,
   videoTitle?: string,
-): Promise<{ videoId: string; chunks: number }> {
+): Promise<{ videoId: string; chunks: number; skipped?: boolean }> {
   const videoId = extractVideoId(videoInput);
   if (!videoId) throw new Error(`Could not extract video ID from: ${videoInput}`);
 
