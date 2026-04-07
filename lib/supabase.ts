@@ -143,39 +143,13 @@ export async function searchTranscriptChunks(
 }
 
 export async function getTranscriptStats() {
-  // 1) One row per source (chunk_index=0) — avoids the 1000-row default limit
-  const { data: sourceRows, error: sourceError } = await supabaseAdmin
-    .from("transcript_chunks")
-    .select("creator_id, video_id")
-    .eq("chunk_index", 0)
-    .limit(50000);
+  // Single aggregation query via RPC — reliable, one round trip
+  const { data, error } = await supabaseAdmin.rpc('get_transcript_stats');
+  if (error) throw error;
 
-  if (sourceError) throw sourceError;
-
-  // Build source counts per creator
-  const creatorSources: Record<string, Set<string>> = {};
-  for (const row of sourceRows || []) {
-    if (!creatorSources[row.creator_id]) {
-      creatorSources[row.creator_id] = new Set();
-    }
-    creatorSources[row.creator_id].add(row.video_id);
-  }
-
-  // 2) Chunk counts per creator via efficient head-only COUNT(*)
-  const creatorIds = Object.keys(creatorSources);
-  const chunkCounts = await Promise.all(
-    creatorIds.map(async (creatorId) => {
-      const { count, error } = await supabaseAdmin
-        .from("transcript_chunks")
-        .select("*", { count: "exact", head: true })
-        .eq("creator_id", creatorId);
-      return { creatorId, count: error ? 0 : (count || 0) };
-    })
-  );
-
-  return creatorIds.map((creatorId) => ({
-    creatorId,
-    chunks: chunkCounts.find((c) => c.creatorId === creatorId)?.count || 0,
-    videos: creatorSources[creatorId].size,
+  return (data || []).map((row: { creator_id: string; chunk_count: number; video_count: number }) => ({
+    creatorId: row.creator_id,
+    chunks: Number(row.chunk_count),
+    videos: Number(row.video_count),
   }));
 }
