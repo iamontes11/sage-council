@@ -626,18 +626,31 @@ export default function CouncilBackground({ active=false }:{ active?:boolean }) 
       }
     }
 
-    // ─── Loop ─────────────────────────────────────────────────────────────────
-    const t0=performance.now();let rafId=0;
+    // ─── Loop — capped at 24fps, pauses when tab hidden ──────────────────────
+    const t0=performance.now(); let rafId=0; let lastFrame=0;
+    const FPS=24, INTERVAL=1000/FPS;
+
+    // Cache G() result — only recalculate on resize
+    let cachedG = G();
+    const origResize = onResize;
+    window.removeEventListener('resize', onResize);
+    const onResizeCached = () => { origResize(); cachedG = G(); };
+    window.addEventListener('resize', onResizeCached);
+
     function frame(now:number){
+      rafId=requestAnimationFrame(frame);
+      if(document.hidden) return; // pause when tab not visible
+      const elapsed=now-lastFrame;
+      if(elapsed<INTERVAL) return; // skip frames to hit ~24fps
+      lastFrame=now-(elapsed%INTERVAL);
       const t=(now-t0)/1000;
       cx.clearRect(0,0,W,H);
       drawScene(t);
       agents.slice().sort((a,b)=>a.y-b.y).forEach(a=>drawAgent(a,t));
       updateAgents();
-      rafId=requestAnimationFrame(frame);
     }
     rafId=requestAnimationFrame(frame);
-    return ()=>{ cancelAnimationFrame(rafId);window.removeEventListener('resize',onResize); };
+    return ()=>{ cancelAnimationFrame(rafId);window.removeEventListener('resize',onResizeCached); };
   },[]);
 
   return (
