@@ -80,13 +80,17 @@ export default function NewChatPage() {
       >
         {/* Crystal ball */}
         <div className="relative flex items-center justify-center">
+          {/* Outer ambient glow — large, always visible against dark bg */}
+          <div className="absolute rounded-full bg-violet-600/30 w-32 h-32 blur-3xl pointer-events-none" />
+          {/* Pulsing inner halo */}
           <motion.div
-            animate={{ scale: [1, 1.15, 1], opacity: [0.18, 0.08, 0.18] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute rounded-full bg-violet-500 w-28 h-28 blur-2xl pointer-events-none"
+            animate={{ scale: [1, 1.18, 1], opacity: [0.55, 0.20, 0.55] }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute rounded-full bg-violet-500 w-24 h-24 blur-2xl pointer-events-none"
           />
           <div className="relative w-16 h-16">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#2a1a4e] via-[#1e1040] to-[#0d0820] border border-violet-400/30 shadow-[0_0_50px_rgba(139,92,246,0.30),inset_0_0_30px_rgba(109,40,217,0.18)]" />
+            {/* Ball body — lighter interior so it reads against dark canvas */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#4a2a7e] via-[#2e1a60] to-[#150d30] border-2 border-violet-400/70 shadow-[0_0_0_1px_rgba(139,92,246,0.25),0_0_30px_rgba(139,92,246,0.70),0_0_60px_rgba(139,92,246,0.35),inset_0_0_20px_rgba(109,40,217,0.30)]" />
             <div className="absolute inset-[3px] rounded-full bg-gradient-to-br from-violet-900/20 via-transparent to-indigo-950/40" />
             <div className="absolute top-[14%] left-[22%] w-[38%] h-[28%] rounded-full bg-white/[0.08] blur-[6px]" />
             <div className="absolute top-[20%] left-[28%] w-[16%] h-[14%] rounded-full bg-white/[0.55] blur-[1.5px]" />
@@ -96,12 +100,12 @@ export default function NewChatPage() {
           </div>
         </div>
 
-        {/* Text with solid dark backing for contrast against animated bg */}
-        <div className="text-center space-y-1.5 px-5 py-3 rounded-2xl bg-black/45">
-          <h1 className="text-xl font-semibold text-white tracking-wide">
+        {/* Text — dark pill so it's always legible over the animated bg */}
+        <div className="text-center space-y-1 px-6 py-3.5 rounded-2xl bg-black/65 border border-white/[0.06]">
+          <h1 className="text-xl font-semibold text-white tracking-wide drop-shadow-lg">
             El Consejo te escucha
           </h1>
-          <p className="text-neutral-300 text-sm max-w-xs mx-auto leading-relaxed">
+          <p className="text-neutral-200 text-sm max-w-xs mx-auto leading-relaxed">
             Plantea tu pregunta, decisión o problema.
           </p>
         </div>

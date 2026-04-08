@@ -75,7 +75,9 @@ export default function CouncilBackground({ active=false }:{ active?:boolean }) 
       // center
       const CCX=Math.round((C1+C2)/2);
       const CCY=Math.round((R1+R2)/2);
-      const TR=Math.min(C2-C1,R2-R1)*0.28;
+      // TR: table radius — capped so rug (TR*2) never bleeds into column walls
+      // available half-span from CCX to C1/C2 wall = (C2-C1)/2, rug needs TR*2 of that
+      const TR=Math.min((C2-C1-24)/4, (R2-R1)*0.26);
       const SR=TR*1.6;
       return {W16,TW,C1,C2,R1,R2,CCX,CCY,TR,SR,
         // room inner bounds
