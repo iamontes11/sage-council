@@ -109,6 +109,7 @@ export function ChatWindow({
   messages, loading, thinking, error, onSend, onClearError,
 }: ChatWindowProps) {
   const [input, setInput] = useState('');
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
@@ -124,6 +125,22 @@ export function ChatWindow({
     ta.style.height = 'auto';
     ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
   }, [input]);
+
+  // Lift input above mobile keyboard via visualViewport
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      const offset = window.innerHeight - vv.height - vv.offsetTop;
+      setKeyboardOffset(Math.max(0, offset));
+    };
+    vv.addEventListener('resize', onResize);
+    vv.addEventListener('scroll', onResize);
+    return () => {
+      vv.removeEventListener('resize', onResize);
+      vv.removeEventListener('scroll', onResize);
+    };
+  }, []);
 
   const handleSubmit = useCallback((e?: React.FormEvent) => {
     e?.preventDefault();
@@ -220,8 +237,11 @@ export function ChatWindow({
         )}
       </AnimatePresence>
 
-      {/* ── Input — sin backdrop-blur ─────────────────────────── */}
-      <div className="border-t border-white/[0.06] bg-[#0d0d0f]/95 p-4">
+      {/* ── Input — lifts above mobile keyboard ──────────────── */}
+      <div
+        className="border-t border-white/[0.06] bg-[#0d0d0f]/95 p-4"
+        style={{ paddingBottom: `${Math.max(16, keyboardOffset + 16)}px` }}
+      >
         <form
           onSubmit={handleSubmit}
           className="max-w-2xl mx-auto flex items-end gap-3 bg-[#18181b] border border-white/[0.10] focus-within:border-violet-500/35 rounded-2xl px-4 py-3 transition-colors duration-150"
