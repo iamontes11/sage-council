@@ -1,15 +1,12 @@
-import Anthropic from '@anthropic-ai/sdk';
+import Groq from 'groq-sdk';
 import { CREATORS, FRAMEWORKS } from './creators';
 import { searchTranscriptChunks } from './supabase';
 import type { CouncilResponse } from '@/types';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
-
-// claude-sonnet-4-6 = más rápido y confiable. Usar opus si se quiere más profundidad (más lento).
-const MODEL = 'claude-sonnet-4-6';
-const TITLE_MODEL = 'claude-haiku-4-5-20251001';
+// Using Groq (llama-3.3-70b) while Anthropic billing is being funded.
+// All prompt logic is ready — switch to Anthropic SDK when credits are loaded.
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
+const MODEL = 'llama-3.3-70b-versatile';
 
 // ─── Context builders ──────────────────────────────────────────────────────
 
@@ -29,9 +26,9 @@ async function buildCreatorContext(userMessage: string) {
 
 async function buildIgnacioMindset(userMessage: string): Promise<string> {
   try {
-    const bookChunks = await searchTranscriptChunks('book-ideas', userMessage, 6);
-    if (bookChunks.length === 0) return '';
-    return bookChunks.map((c) => c.chunk_text).join('\n').substring(0, 1800);
+    const chunks = await searchTranscriptChunks('book-ideas', userMessage, 6);
+    if (chunks.length === 0) return '';
+    return chunks.map((c) => c.chunk_text).join('\n').substring(0, 1800);
   } catch {
     return '';
   }
@@ -39,32 +36,24 @@ async function buildIgnacioMindset(userMessage: string): Promise<string> {
 
 async function buildFrameworkContext(userMessage: string): Promise<string> {
   const sections: string[] = [];
-  const nonBookFrameworks = FRAMEWORKS.filter((fw) => fw.id !== 'book-ideas');
-  for (const fw of nonBookFrameworks) {
+  for (const fw of FRAMEWORKS.filter((f) => f.id !== 'book-ideas')) {
     try {
       const chunks = await searchTranscriptChunks(fw.id, userMessage, 3);
-      if (chunks.length > 0) {
+      if (chunks.length > 0)
         sections.push(chunks.map((c) => c.chunk_text).join(' ').substring(0, 700));
-      }
-    } catch {
-      // optional
-    }
+    } catch { /* optional */ }
   }
   return sections.join('\n\n');
 }
 
 function buildTranscriptBlock(
-  contexts: Array<{
-    creator: (typeof CREATORS)[number];
-    chunks: Array<{ chunk_text: string; video_title: string }>;
-  }>
+  contexts: Array<{ creator: (typeof CREATORS)[number]; chunks: Array<{ chunk_text: string; video_title: string }> }>
 ): string {
   return contexts
     .filter(({ chunks }) => chunks.length > 0)
-    .map(({ creator, chunks }) => {
-      const text = chunks.map((c) => c.chunk_text).join(' ').substring(0, 800);
-      return `[${creator.name}]\n${text}`;
-    })
+    .map(({ creator, chunks }) =>
+      `[${creator.name}]\n${chunks.map((c) => c.chunk_text).join(' ').substring(0, 800)}`
+    )
     .join('\n\n');
 }
 
@@ -126,19 +115,14 @@ function extractAnswerText(content: string): string {
         .join('\n\n---\n\n')
         .substring(0, 1200);
     }
-  } catch {
-    // plain text
-  }
+  } catch { /* plain text */ }
   return content;
 }
 
 function parseResponse(rawText: string): CouncilResponse {
   const parts = rawText.split(/\nPRIMER_PASO:\s*/);
   if (parts.length >= 2) {
-    return {
-      answer: parts[0].trim(),
-      first_step: parts[1].trim(),
-    };
+    return { answer: parts[0].trim(), first_step: parts[1].trim() };
   }
   return {
     answer: rawText.trim(),
@@ -162,25 +146,13 @@ export async function generateCouncilResponse(
   const transcriptBlock = buildTranscriptBlock(creatorContexts);
   const systemPrompt = buildSystemPrompt(buildCouncilRoster());
 
-  // Build layered user prompt
   const parts: string[] = [];
-
-  if (ignacioMindset) {
-    parts.push(
-      `CÓMO PIENSA IGNACIO — sus propios principios y forma de ver el mundo (habla en su lenguaje):\n${ignacioMindset}`
-    );
-  }
-
-  if (transcriptBlock) {
-    parts.push(
-      `SABIDURÍA DE LOS MIEMBROS DEL CONSEJO — de sus propios transcripts (no cites fuente, integra como perspectiva):\n${transcriptBlock}`
-    );
-  }
-
-  if (frameworkContext) {
+  if (ignacioMindset)
+    parts.push(`CÓMO PIENSA IGNACIO — sus propios principios (habla en su lenguaje):\n${ignacioMindset}`);
+  if (transcriptBlock)
+    parts.push(`SABIDURÍA DE LOS MIEMBROS DEL CONSEJO — de sus transcripts (no cites fuente):\n${transcriptBlock}`);
+  if (frameworkContext)
     parts.push(`CONTEXTO ADICIONAL:\n${frameworkContext}`);
-  }
-
   parts.push(`CONSULTA DE IGNACIO:\n"${userMessage}"`);
 
   const userPrompt = parts.join('\n\n---\n\n');
@@ -191,55 +163,46 @@ export async function generateCouncilResponse(
   }));
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await groq.chat.completions.create({
       model: MODEL,
-      max_tokens: 4096,
-      system: systemPrompt,
+      max_tokens: 4000,
+      temperature: 0.72,
       messages: [
+        { role: 'system', content: systemPrompt },
         ...recentHistory,
         { role: 'user', content: userPrompt },
       ],
     });
 
-    const block = response.content.find((b) => b.type === 'text');
-    const rawText = block && block.type === 'text' ? block.text : '';
-
-    if (!rawText) {
-      console.error('Empty response from Anthropic API');
-      return buildFallbackResponse();
-    }
-
+    const rawText = response.choices[0]?.message?.content || '';
+    if (!rawText) return buildFallbackResponse();
     return parseResponse(rawText);
   } catch (error) {
-    // Log the real error so we can debug
-    console.error('Anthropic API error details:', JSON.stringify(error, null, 2));
+    console.error('LLM error:', error);
     return buildFallbackResponse();
   }
 }
 
 function buildFallbackResponse(): CouncilResponse {
   return {
-    answer:
-      'Hubo un error conectando con el Consejo. Intenta de nuevo en un momento.',
-    first_step: 'Recarga la página e intenta tu consulta nuevamente.',
+    answer: 'El Consejo no pudo procesar tu consulta en este momento. Intenta de nuevo.',
+    first_step: 'Recarga y vuelve a intentarlo.',
     choices: [],
   };
 }
 
 export async function generateChatTitle(userMessage: string): Promise<string> {
   try {
-    const response = await anthropic.messages.create({
-      model: TITLE_MODEL,
+    const response = await groq.chat.completions.create({
+      model: MODEL,
       max_tokens: 20,
-      messages: [
-        {
-          role: 'user',
-          content: `Genera un título muy corto (3-5 palabras) en español para una conversación que empieza con: "${userMessage.slice(0, 200)}". Responde solo el título, sin comillas ni puntuación.`,
-        },
-      ],
+      temperature: 0.5,
+      messages: [{
+        role: 'user',
+        content: `Genera un título muy corto (3-5 palabras) en español para una conversación que empieza con: "${userMessage.slice(0, 200)}". Responde solo el título, sin comillas ni puntuación.`,
+      }],
     });
-    const block = response.content[0];
-    return block.type === 'text' ? block.text.trim() : 'Nueva Consulta';
+    return response.choices[0]?.message?.content?.trim() || 'Nueva Consulta';
   } catch {
     return 'Nueva Consulta';
   }
