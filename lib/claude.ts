@@ -10,12 +10,15 @@ const anthropic = new Anthropic({
 const MODEL = 'claude-opus-4-6';
 const TITLE_MODEL = 'claude-haiku-4-5-20251001';
 
+// Extended thinking: Claude razona internamente antes de responder
+const THINKING_BUDGET = 8000;
+
 /** Fetch transcript chunks for all council members in parallel */
 async function buildCreatorContexts(userMessage: string) {
   const contexts = await Promise.all(
     CREATORS.map(async (creator) => {
       try {
-        const chunks = await searchTranscriptChunks(creator.id, userMessage, 3);
+        const chunks = await searchTranscriptChunks(creator.id, userMessage, 5);
         return { creator, chunks };
       } catch {
         return { creator, chunks: [] };
@@ -30,13 +33,13 @@ async function buildFrameworkContext(userMessage: string): Promise<string> {
   const sections: string[] = [];
   for (const fw of FRAMEWORKS) {
     try {
-      const chunks = await searchTranscriptChunks(fw.id, userMessage, 3);
+      const chunks = await searchTranscriptChunks(fw.id, userMessage, 4);
       if (chunks.length > 0) {
-        const text = chunks.map((c) => c.chunk_text).join(' ').substring(0, 600);
+        const text = chunks.map((c) => c.chunk_text).join(' ').substring(0, 900);
         sections.push(`[${fw.name}] ${text}`);
       }
     } catch {
-      // framework context is optional
+      // optional
     }
   }
   return sections.length > 0 ? sections.join('\n\n') : '';
@@ -50,45 +53,47 @@ function formatCreatorContext(
   const excerpts = chunks
     .map((c) => c.chunk_text)
     .join(' ')
-    .substring(0, 600);
-  return `[${creator.name}] ${excerpts}`;
+    .substring(0, 900);
+  return `[${creator.name}]: ${excerpts}`;
 }
 
-const COUNCIL_SYSTEM_PROMPT = `Eres el SAGE COUNCIL — una inteligencia colectiva que habla con UNA sola voz, como si 12 personas sabias y con experiencia real hubieran llegado a consenso después de escuchar a Ignacio.
+const COUNCIL_SYSTEM_PROMPT = `Eres el SAGE COUNCIL — doce mentes distintas que hablan con una sola voz después de llegar a consenso real. No eres un asistente. Eres el interlocutor más honesto e inteligente que Ignacio tiene.
 
-CONTEXTO DE CONVERSACIÓN:
-Esta es una conversación continua. Ignacio puede hacer una consulta inicial, pero también puede responderte, debatirte, pedirte que desarrolles más un punto, cuestionar tu razonamiento, o explorar una idea específica. Responde como lo haría un interlocutor inteligente que recuerda todo lo que se ha dicho.
+QUIÉN ES IGNACIO:
+Un individuo de alto rendimiento con fuerte pensamiento sistémico, mucha ambición, y una tendencia a sobreanalizar en lugar de ejecutar. Se frustra con respuestas genéricas. Lo que necesita es alguien que entienda exactamente qué está pasando en su situación específica y le hable con precisión quirúrgica.
+
+CÓMO RESPONDER:
+Antes de responder, diagnostica la pregunta real. A veces lo que Ignacio pregunta no es lo que necesita resolver. Identifica la tensión de fondo, el mecanismo que opera debajo de la superficie, y habla desde ahí.
+
+Tu respuesta debe:
+- Demostrar que entendiste exactamente la situación específica de Ignacio — no una situación genérica similar
+- Explicar el mecanismo real: por qué funciona así, qué está generando lo que describe
+- Dar una posición clara y fundamentada — no opciones, no listas, no frameworks con nombre
+- Construir sobre el historial de conversación si existe — nunca repetir, siempre profundizar
+- Ser incómoda si la verdad lo requiere — no validar por validar
 
 TIPO DE RESPUESTA SEGÚN EL MENSAJE:
-- Consulta nueva: Diagnostica la situación real, explica el mecanismo detrás, y da una dirección clara.
-- Debate o cuestionamiento: Si Ignacio tiene razón, concédelo y ajusta. Si no la tiene, explica por qué con argumentos — no con autoridad.
-- Pide más desarrollo: Profundiza el punto exacto que señala. No repitas lo ya dicho — ve más adentro.
-- Pide acción más concreta: Desglosa el paso con detalle operacional de quién, qué, cuándo, cómo.
+- Consulta nueva: diagnóstico → mecanismo → dirección clara
+- Debate: si Ignacio tiene razón, concédelo con argumento. Si no la tiene, explica por qué con lógica
+- Pide más desarrollo: ve más adentro del punto exacto, no repitas lo dicho
+- Pide acción concreta: operacionaliza con quién, qué, cuándo, dónde, cómo
 
-ESTRUCTURA BASE:
-1. El diagnóstico real — lo que está pasando debajo de la superficie. Lo que Ignacio pregunta a veces no es lo que necesita responder.
-2. El razonamiento — qué mecanismo psicológico, sistémico o humano opera aquí y por qué funciona así.
-3. La dirección — una posición clara con sus razones. No opciones.
+TONO: Amigo muy inteligente que dice la verdad aunque incomode. Directo. Sin condescendencia. Sin clichés motivacionales. Sin frases vacías. Cada oración debe ganar su lugar.
 
-REGLAS ABSOLUTAS:
-- Responde SIEMPRE en español
-- Una sola posición — nunca múltiples caminos ni listas de opciones
-- NO menciones nombres de pensadores ni de dónde viene la sabiduría
-- Habla a Ignacio de tú — directo, personal
-- 3-5 párrafos sustanciales. En follow-ups puede ser más corto pero igualmente denso
-- Usa TODO el historial. Sé coherente. Construye sobre lo ya dicho. No te repitas
-- El primer_paso es específico, físico, ejecutable hoy o mañana
+IDIOMA: Siempre en español. Siempre de tú.
 
-TONO: Como un amigo muy inteligente que dice la verdad aunque incomode. Que puede cambiar de posición si el argumento es bueno. Directo, fundamentado, sin condescendencia, sin clichés motivacionales.
+LONGITUD: 4-6 párrafos sustanciales para consultas nuevas. Más corto en follow-ups, igual de denso.
 
-FORMATO DE SALIDA (SOLO JSON válido, sin markdown, sin backticks):
-{
-  "answer": "3-5 párrafos usando todo el contexto de la conversación. En follow-ups responde directamente lo que Ignacio planteó, construyendo sobre el intercambio.",
-  "first_step": "Acción concreta ejecutable hoy o mañana. Actualiza o ajusta según la evolución de la conversación."
-}`;
+FORMATO DE SALIDA — escribe en prosa continua, sin encabezados visibles. Al terminar el cuerpo de la respuesta, en una nueva línea escribe exactamente esto:
+PRIMER_PASO: [una sola acción específica, física, ejecutable en las próximas 24 horas — no un plan, un acto]`;
 
-/** Convert stored assistant content (JSON or plain text) to readable text for history */
+/** Convert stored assistant content to readable text for history */
 function extractAnswerText(content: string): string {
+  // Handle new delimited format
+  if (content.includes('PRIMER_PASO:')) {
+    return content.split(/\nPRIMER_PASO:/)[0].trim();
+  }
+  // Handle legacy JSON format
   try {
     const parsed = JSON.parse(content);
     if (parsed.answer) {
@@ -102,9 +107,28 @@ function extractAnswerText(content: string): string {
       ).join('\n\n---\n\n').substring(0, 1200);
     }
   } catch {
-    // Not JSON, return as-is
+    // plain text
   }
   return content;
+}
+
+/** Parse delimited response into answer + first_step */
+function parseResponse(rawText: string): CouncilResponse {
+  const primer = /\nPRIMER_PASO:\s*/;
+  const parts = rawText.split(primer);
+
+  if (parts.length >= 2) {
+    return {
+      answer: parts[0].trim(),
+      first_step: parts[1].trim(),
+    };
+  }
+
+  // No delimiter found — treat all as answer
+  return {
+    answer: rawText.trim(),
+    first_step: 'Define el próximo movimiento concreto basado en la respuesta anterior y ejecútalo hoy.',
+  };
 }
 
 export async function generateCouncilResponse(
@@ -120,35 +144,35 @@ export async function generateCouncilResponse(
     .map(({ creator, chunks }) => formatCreatorContext(creator, chunks))
     .filter(Boolean);
 
-  const transcriptBlock =
-    contextSections.length > 0
-      ? `## CONTEXTO INTERNO (usa esto para fundamentar tu respuesta — NO lo cites explícitamente)\n\n${contextSections.join('\n\n')}`
-      : '## Sin transcripts — usa los frameworks de los pensadores que conoces.';
-
-  const frameworkBlock = frameworkContext
-    ? `## FRAMEWORKS DE FONDO\n\n${frameworkContext}`
+  const contextBlock = contextSections.length > 0
+    ? `INFORMACIÓN DE REFERENCIA (usa para fundamentar — nunca cites explícitamente de dónde viene):\n\n${contextSections.join('\n\n')}`
     : '';
 
-  // Build clean history — convert assistant JSON to readable text
-  // Anthropic API only accepts 'user' and 'assistant' roles
-  const recentHistory = chatHistory.slice(-8).map((m) => ({
+  const frameworkBlock = frameworkContext
+    ? `FRAMEWORKS RELEVANTES:\n\n${frameworkContext}`
+    : '';
+
+  // Build clean history
+  const recentHistory = chatHistory.slice(-10).map((m) => ({
     role: m.role as 'user' | 'assistant',
     content: m.role === 'assistant' ? extractAnswerText(m.content) : m.content,
   }));
 
-  const userPrompt = `${transcriptBlock}
-
-${frameworkBlock}
-
-Pregunta de Ignacio: "${userMessage}"
-
-Responde con SOLO JSON válido.`;
+  // Build the user message with context
+  const contextParts = [contextBlock, frameworkBlock].filter(Boolean).join('\n\n');
+  const userPrompt = contextParts
+    ? `${contextParts}\n\n---\n\nIgnacio dice: "${userMessage}"`
+    : `Ignacio dice: "${userMessage}"`;
 
   let rawText = '';
   try {
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 3000,
+      max_tokens: 16000,
+      thinking: {
+        type: 'enabled',
+        budget_tokens: THINKING_BUDGET,
+      },
       system: COUNCIL_SYSTEM_PROMPT,
       messages: [
         ...recentHistory,
@@ -156,27 +180,17 @@ Responde con SOLO JSON válido.`;
       ],
     });
 
-    const block = response.content[0];
-    rawText = block.type === 'text' ? block.text : '';
+    // Extract only text blocks — skip thinking blocks
+    const textBlock = response.content.find((b) => b.type === 'text');
+    rawText = textBlock && textBlock.type === 'text' ? textBlock.text : '';
   } catch (error) {
     console.error('Anthropic API error:', error);
     return buildFallbackResponse();
   }
 
-  const clean = rawText
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim();
+  if (!rawText) return buildFallbackResponse();
 
-  try {
-    const parsed = JSON.parse(clean) as CouncilResponse;
-    if (!parsed.answer) throw new Error('Missing answer field');
-    return parsed;
-  } catch {
-    console.error('Failed to parse council response:', clean.substring(0, 200));
-    return buildFallbackResponse();
-  }
+  return parseResponse(rawText);
 }
 
 function buildFallbackResponse(): CouncilResponse {
@@ -197,7 +211,7 @@ export async function generateChatTitle(userMessage: string): Promise<string> {
       messages: [
         {
           role: 'user',
-          content: `Genera un título muy corto (3-5 palabras) en español para una conversación que empieza con: "${userMessage.slice(0, 200)}". Responde solo el título, sin comillas.`,
+          content: `Genera un título muy corto (3-5 palabras) en español para una conversación que empieza con: "${userMessage.slice(0, 200)}". Responde solo el título, sin comillas ni puntuación.`,
         },
       ],
     });
