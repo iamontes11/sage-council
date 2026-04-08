@@ -1,45 +1,35 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import Image from 'next/image';
-import { VoxelAvatar } from '@/components/VoxelAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus,
-  MessageSquare,
-  Archive,
-  Trash2,
-  LogOut,
-  ChevronRight,
-  Settings,
-  PanelLeftClose,
-  PanelLeftOpen,
+  Plus, MessageSquare, Archive, Trash2, LogOut,
+  ChevronRight, Settings, X, Menu,
 } from 'lucide-react';
 import { toast } from './Toast';
 import type { Chat } from '@/types';
 
 interface SidebarProps {
-  user?: {
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-  } | null;
+  user?: { name?: string | null; email?: string | null; image?: string | null } | null;
 }
 
 export function Sidebar({ user }: SidebarProps) {
+  const [open, setOpen] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
   const [archivedChats, setArchivedChats] = useState<Chat[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [collapsed, setCollapsed] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => {
-    loadChats();
-  }, [pathname]);
+  useEffect(() => { loadChats(); }, [pathname]);
+
+  // Close on route change
+  useEffect(() => { setOpen(false); }, [pathname]);
 
   const loadChats = async () => {
     try {
@@ -47,15 +37,10 @@ export function Sidebar({ user }: SidebarProps) {
         fetch('/api/chats'),
         fetch('/api/chats?archived=true'),
       ]);
-      const activeData = await activeRes.json();
-      const archiveData = await archiveRes.json();
-      setChats(activeData.chats || []);
-      setArchivedChats(archiveData.chats || []);
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false);
-    }
+      setChats((await activeRes.json()).chats || []);
+      setArchivedChats((await archiveRes.json()).chats || []);
+    } catch { /* silently fail */ }
+    finally { setLoading(false); }
   };
 
   const handleNewChat = async () => {
@@ -67,44 +52,33 @@ export function Sidebar({ user }: SidebarProps) {
       });
       const { chat } = await res.json();
       router.push(`/chat/${chat.id}`);
-    } catch {
-      router.push('/chat');
-    }
+    } catch { router.push('/chat'); }
   };
 
   const handleArchive = async (e: React.MouseEvent, chatId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     await fetch(`/api/chats/${chatId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ archived: true }),
     });
-    setChats((prev) => prev.filter((c) => c.id !== chatId));
+    setChats((p) => p.filter((c) => c.id !== chatId));
     toast('Conversación archivada', 'info');
     if (pathname === `/chat/${chatId}`) router.push('/chat');
   };
 
   const handleDelete = async (e: React.MouseEvent, chatId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     if (!confirm('¿Eliminar esta conversación permanentemente?')) return;
     await fetch(`/api/chats/${chatId}`, { method: 'DELETE' });
-    setChats((prev) => prev.filter((c) => c.id !== chatId));
-    setArchivedChats((prev) => prev.filter((c) => c.id !== chatId));
+    setChats((p) => p.filter((c) => c.id !== chatId));
+    setArchivedChats((p) => p.filter((c) => c.id !== chatId));
     toast('Conversación eliminada', 'info');
     if (pathname === `/chat/${chatId}`) router.push('/chat');
   };
 
   const currentChatId = pathname.match(/\/chat\/([^/]+)/)?.[1];
 
-  const ChatItem = ({
-    chat,
-    archived = false,
-  }: {
-    chat: Chat;
-    archived?: boolean;
-  }) => {
+  const ChatItem = ({ chat, archived = false }: { chat: Chat; archived?: boolean }) => {
     const isActive = chat.id === currentChatId;
     return (
       <motion.div
@@ -113,9 +87,7 @@ export function Sidebar({ user }: SidebarProps) {
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -8 }}
         className={`group relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-150 text-sm ${
-          isActive
-            ? 'bg-white/10 text-white shadow-sm'
-            : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200'
+          isActive ? 'bg-white/10 text-white shadow-sm' : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200'
         }`}
         onClick={() => router.push(`/chat/${chat.id}`)}
       >
@@ -123,19 +95,13 @@ export function Sidebar({ user }: SidebarProps) {
         <span className="flex-1 truncate">{chat.title}</span>
         <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
           {!archived && (
-            <button
-              onClick={(e) => handleArchive(e, chat.id)}
-              className="p-1.5 hover:text-white hover:bg-white/10 rounded-lg opacity-60 hover:opacity-100 transition-all"
-              title="Archivar"
-            >
+            <button onClick={(e) => handleArchive(e, chat.id)}
+              className="p-1.5 hover:text-white hover:bg-white/10 rounded-lg opacity-60 hover:opacity-100 transition-all" title="Archivar">
               <Archive size={12} />
             </button>
           )}
-          <button
-            onClick={(e) => handleDelete(e, chat.id)}
-            className="p-1.5 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-60 hover:opacity-100 transition-all"
-            title="Eliminar"
-          >
+          <button onClick={(e) => handleDelete(e, chat.id)}
+            className="p-1.5 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-60 hover:opacity-100 transition-all" title="Eliminar">
             <Trash2 size={12} />
           </button>
         </div>
@@ -143,173 +109,152 @@ export function Sidebar({ user }: SidebarProps) {
     );
   };
 
-  /* ── Collapsed mini-sidebar ─────────────────────────────────── */
-  if (collapsed) {
-    return (
-      <div className="w-14 shrink-0 flex flex-col items-center py-4 gap-3 bg-[#111] border-r border-white/[0.06] h-full">
-        <button
-          onClick={() => setCollapsed(false)}
-          className="p-2 rounded-lg text-neutral-500 hover:text-white hover:bg-white/5 transition-all"
-          title="Expandir"
-        >
-          <PanelLeftOpen size={18} />
-        </button>
-        <div className="divider w-6 mx-auto" />
-        <button
-          onClick={handleNewChat}
-          className="p-2 rounded-lg bg-sage-600 hover:bg-sage-500 text-white transition-colors"
-          title="Nueva consulta"
-        >
-          <Plus size={16} />
-        </button>
-      </div>
-    );
-  }
-
-  /* ── Full sidebar ───────────────────────────────────────────── */
   return (
-    <div className="w-[280px] shrink-0 flex flex-col bg-[#111] border-r border-white/[0.06] h-full">
-      {/* Logo + collapse */}
-      <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {/* Crystal ball icon */}
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-900/40 to-indigo-950/60 border border-violet-500/20 flex items-center justify-center text-lg">
-            🔮
-          </div>
-          <div>
-            <h1 className="text-white font-semibold text-sm leading-tight">
-              Sage Council
-            </h1>
-            <p className="text-neutral-600 text-[11px]">
-              12 mentes, 1 respuesta
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => setCollapsed(true)}
-          className="p-1.5 rounded-lg text-neutral-600 hover:text-neutral-300 hover:bg-white/5 transition-all"
-          title="Colapsar"
-        >
-          <PanelLeftClose size={16} />
-        </button>
-      </div>
+    <>
+      {/* ── Hamburger button — always visible top-left ── */}
+      <button
+        onClick={() => setOpen(true)}
+        className="fixed top-3.5 left-4 z-40 p-2 rounded-xl bg-[#111]/80 backdrop-blur-sm border border-white/[0.06] text-neutral-400 hover:text-white hover:bg-white/10 transition-all"
+        aria-label="Abrir menú"
+      >
+        <Menu size={18} />
+      </button>
 
-      {/* New Chat button */}
-      <div className="p-3">
-        <button
-          onClick={handleNewChat}
-          className="btn btn-primary w-full gap-2 py-2.5 rounded-xl text-sm"
-        >
-          <Plus size={16} />
-          Nueva consulta
-        </button>
-      </div>
-
-      {/* Chat list */}
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
-        {loading ? (
-          <div className="space-y-2 p-2">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="skeleton h-9 w-full rounded-xl"
-                style={{ animationDelay: `${i * 0.1}s` }}
-              />
-            ))}
-          </div>
-        ) : chats.length === 0 ? (
-          <div className="px-3 py-8 text-center text-neutral-600 text-sm">
-            <MessageSquare size={24} className="mx-auto mb-2 opacity-30" />
-            Aún no hay consultas
-          </div>
-        ) : (
-          <div className="space-y-0.5">
-            <p className="px-3 py-2 text-[11px] text-neutral-600 uppercase tracking-wider font-semibold">
-              Consultas
-            </p>
-            <AnimatePresence>
-              {chats.map((chat) => (
-                <ChatItem key={chat.id} chat={chat} />
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* Archived section */}
-        {archivedChats.length > 0 && (
-          <div className="mt-4">
-            <button
-              onClick={() => setShowArchived(!showArchived)}
-              className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-neutral-600 hover:text-neutral-400 transition-colors uppercase tracking-wider font-semibold"
-            >
-              <motion.div
-                animate={{ rotate: showArchived ? 90 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ChevronRight size={12} />
-              </motion.div>
-              <Archive size={12} />
-              Archivadas ({archivedChats.length})
-            </button>
-            <AnimatePresence>
-              {showArchived && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-0.5 mt-1 overflow-hidden"
-                >
-                  {archivedChats.map((chat) => (
-                    <ChatItem key={chat.id} chat={chat} archived />
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-      </div>
-
-      {/* User footer */}
-      <div className="p-3 border-t border-white/[0.06] space-y-1">
-        <button
-          onClick={() => router.push('/admin')}
-          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-neutral-500 hover:text-neutral-300 hover:bg-white/[0.04] rounded-xl transition-all"
-        >
-          <Settings size={13} />
-          Gestionar Transcripts
-        </button>
-        <div
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] group cursor-pointer transition-all"
-          onClick={() => signOut({ callbackUrl: '/' })}
-        >
-          {user?.image ? (
-            <Image
-              src={user.image}
-              alt={user.name || 'Usuario'}
-              width={28}
-              height={28}
-              className="rounded-full ring-2 ring-white/10"
-            />
-          ) : (
-            <div className="w-7 h-7 rounded-full bg-sage-600 flex items-center justify-center text-xs text-white font-bold">
-              {user?.name?.[0] || user?.email?.[0] || '?'}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-neutral-300 font-medium truncate">
-              {user?.name}
-            </p>
-            <p className="text-[11px] text-neutral-600 truncate">
-              {user?.email}
-            </p>
-          </div>
-          <LogOut
-            size={13}
-            className="text-neutral-600 group-hover:text-neutral-400 shrink-0 transition-colors"
+      {/* ── Backdrop ── */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
+            onClick={() => setOpen(false)}
           />
-        </div>
-      </div>
-    </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Sidebar panel ── */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            ref={sidebarRef}
+            key="sidebar"
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed left-0 top-0 bottom-0 z-50 w-[280px] flex flex-col bg-[#111] border-r border-white/[0.06] shadow-2xl"
+          >
+            {/* Header */}
+            <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-900/40 to-indigo-950/60 border border-violet-500/20 flex items-center justify-center text-lg">
+                  🔮
+                </div>
+                <div>
+                  <h1 className="text-white font-semibold text-sm leading-tight">Sage Council</h1>
+                  <p className="text-neutral-600 text-[11px]">12 mentes, 1 respuesta</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setOpen(false)}
+                className="p-1.5 rounded-lg text-neutral-600 hover:text-neutral-300 hover:bg-white/5 transition-all"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* New Chat */}
+            <div className="p-3">
+              <button onClick={handleNewChat} className="btn btn-primary w-full gap-2 py-2.5 rounded-xl text-sm">
+                <Plus size={16} />
+                Nueva consulta
+              </button>
+            </div>
+
+            {/* Chat list */}
+            <div className="flex-1 overflow-y-auto px-2 pb-2">
+              {loading ? (
+                <div className="space-y-2 p-2">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="skeleton h-9 w-full rounded-xl" style={{ animationDelay: `${i * 0.1}s` }} />
+                  ))}
+                </div>
+              ) : chats.length === 0 ? (
+                <div className="px-3 py-8 text-center text-neutral-600 text-sm">
+                  <MessageSquare size={24} className="mx-auto mb-2 opacity-30" />
+                  Aún no hay consultas
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  <p className="px-3 py-2 text-[11px] text-neutral-600 uppercase tracking-wider font-semibold">Consultas</p>
+                  <AnimatePresence>
+                    {chats.map((chat) => <ChatItem key={chat.id} chat={chat} />)}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {archivedChats.length > 0 && (
+                <div className="mt-4">
+                  <button
+                    onClick={() => setShowArchived(!showArchived)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-[11px] text-neutral-600 hover:text-neutral-400 transition-colors uppercase tracking-wider font-semibold"
+                  >
+                    <motion.div animate={{ rotate: showArchived ? 90 : 0 }} transition={{ duration: 0.2 }}>
+                      <ChevronRight size={12} />
+                    </motion.div>
+                    <Archive size={12} />
+                    Archivadas ({archivedChats.length})
+                  </button>
+                  <AnimatePresence>
+                    {showArchived && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-0.5 mt-1 overflow-hidden"
+                      >
+                        {archivedChats.map((chat) => <ChatItem key={chat.id} chat={chat} archived />)}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
+
+            {/* User footer */}
+            <div className="p-3 border-t border-white/[0.06] space-y-1">
+              <button
+                onClick={() => router.push('/admin')}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-neutral-500 hover:text-neutral-300 hover:bg-white/[0.04] rounded-xl transition-all"
+              >
+                <Settings size={13} />
+                Gestionar Transcripts
+              </button>
+              <div
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] group cursor-pointer transition-all"
+                onClick={() => signOut({ callbackUrl: '/' })}
+              >
+                {user?.image ? (
+                  <Image src={user.image} alt={user.name || 'Usuario'} width={28} height={28} className="rounded-full ring-2 ring-white/10" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-sage-600 flex items-center justify-center text-xs text-white font-bold">
+                    {user?.name?.[0] || user?.email?.[0] || '?'}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-neutral-300 font-medium truncate">{user?.name}</p>
+                  <p className="text-[11px] text-neutral-600 truncate">{user?.email}</p>
+                </div>
+                <LogOut size={13} className="text-neutral-600 group-hover:text-neutral-400 shrink-0 transition-colors" />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
