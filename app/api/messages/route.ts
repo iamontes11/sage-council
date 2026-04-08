@@ -20,6 +20,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
   }
 
+  // Get conversation history BEFORE saving the new user message
+  // This avoids sending the current message twice to the LLM
+  const previousHistory = await getChatMessages(chatId);
+
+  // Map history to clean text for the AI
+  // (DB stores assistant content as JSON strings — extract readable text)
+  const historyMessages = previousHistory.map((m) => ({
+    role: m.role as 'user' | 'assistant',
+    content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+  }));
+
   // Save user message
   const userMessage = await saveMessage({
     chat_id: chatId,
@@ -27,16 +38,7 @@ export async function POST(req: NextRequest) {
     content,
   });
 
-  // Get conversation history
-  const history = await getChatMessages(chatId);
-
-  // Map history to string content for the AI (DB stores assistant content as JSON strings)
-  const historyMessages = history.map((m) => ({
-    role: m.role as 'user' | 'assistant',
-    content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
-  }));
-
-  // Generate council response
+  // Generate council response with clean history (current message NOT in history)
   const councilResponse = await generateCouncilResponse(content, historyMessages);
 
   // Save assistant message
@@ -46,8 +48,8 @@ export async function POST(req: NextRequest) {
     content: JSON.stringify(councilResponse),
   });
 
-  // Generate title if this is the first exchange
-  if (history.length <= 2) {
+  // Generate title on first exchange
+  if (previousHistory.length === 0) {
     const title = await generateChatTitle(content);
     await updateChatTitle(chatId, title);
   }
