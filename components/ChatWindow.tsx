@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Send, AlertCircle, X, Home, Sparkles } from 'lucide-react';
+import { Send, AlertCircle, X, Home, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChoiceCard } from './ChoiceCard';
 import CouncilThinking from './CouncilThinking';
 import type { Message, CouncilResponse } from '@/types';
 
@@ -26,7 +25,7 @@ function UserBubble({ content }: { content: string }) {
       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
       className="flex justify-end"
     >
-      <div className="max-w-[75%] bg-sage-600/20 border border-sage-600/30 text-neutral-100 rounded-2xl rounded-tr-sm px-5 py-3.5 text-sm leading-relaxed shadow-sm">
+      <div className="max-w-[78%] bg-white/[0.07] border border-white/[0.09] text-neutral-100 rounded-2xl rounded-tr-sm px-5 py-3.5 text-sm leading-relaxed">
         {content}
       </div>
     </motion.div>
@@ -35,56 +34,62 @@ function UserBubble({ content }: { content: string }) {
 
 /* ── Respuesta del Consejo ───────────────────────────────────── */
 function CouncilBubble({ response }: { response: CouncilResponse }) {
+  // Support both new format (answer) and legacy format (council_note + choices)
+  const answerText = response.answer ||
+    (response.council_note ? response.council_note + (response.choices?.[0]?.perspective ? '\n\n' + response.choices[0].perspective : '') : '');
+  const firstStep = response.first_step || response.choices?.[0]?.first_step || response.choices?.[0]?.actionStep;
+
+  const paragraphs = answerText
+    .split('\n\n')
+    .map((p) => p.trim())
+    .filter(Boolean);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-      className="space-y-5"
+      className="flex gap-3"
     >
-      {/* Encabezado */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-900/40 to-indigo-950/60 border border-violet-500/20 flex items-center justify-center text-xl">
-          🔮
-        </div>
-        <div>
-          <p className="text-white font-semibold text-sm">El Consejo Sabio</p>
-          <p className="text-neutral-500 text-xs">1 mejor respuesta</p>
-        </div>
+      {/* Avatar */}
+      <div className="shrink-0 mt-0.5 w-8 h-8 rounded-xl bg-gradient-to-br from-violet-900/50 to-indigo-950/70 border border-violet-500/20 flex items-center justify-center text-base">
+        🔮
       </div>
 
-      {/* Nota del Consejo */}
-      {response.council_note && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1, duration: 0.3 }}
-          className="relative rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent px-5 py-4 glass"
-        >
-          <div className="flex items-center gap-2 mb-2.5">
-            <Sparkles size={12} className="text-sage-400/60" />
-            <span className="text-xs text-sage-400/60 uppercase tracking-wider font-semibold">
-              Vision del Consejo
-            </span>
-          </div>
-          <p className="text-neutral-300 text-sm leading-relaxed italic">
-            {response.council_note}
-          </p>
-        </motion.div>
-      )}
+      {/* Content */}
+      <div className="flex-1 space-y-4 min-w-0">
+        {/* Answer paragraphs */}
+        <div className="space-y-3">
+          {paragraphs.map((para, i) => (
+            <motion.p
+              key={i}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 + i * 0.06, duration: 0.3 }}
+              className="text-neutral-200 text-sm leading-relaxed"
+            >
+              {para}
+            </motion.p>
+          ))}
+        </div>
 
-      {/* Tarjetas */}
-      <div className="grid grid-cols-1 gap-4">
-        {response.choices?.map((choice, i) => (
+        {/* First step */}
+        {firstStep && (
           <motion.div
-            key={choice.id || i}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 + i * 0.1, duration: 0.3 }}
+            transition={{ delay: 0.2 + paragraphs.length * 0.06, duration: 0.3 }}
+            className="flex gap-3 p-3.5 rounded-xl bg-violet-950/30 border border-violet-500/15"
           >
-            <ChoiceCard choice={choice} index={i} />
+            <Zap size={14} className="shrink-0 mt-0.5 text-violet-400" />
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-violet-400/70 mb-1">
+                Próximo paso
+              </p>
+              <p className="text-sm text-neutral-300 leading-relaxed">{firstStep}</p>
+            </div>
           </motion.div>
-        ))}
+        )}
       </div>
     </motion.div>
   );
@@ -96,21 +101,33 @@ function ThinkingSkeleton() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-4 mt-4"
+      className="flex gap-3 mt-4"
     >
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-xl bg-white/5 animate-pulse flex items-center justify-center text-xl">
-          🔮
-        </div>
-        <div className="space-y-1.5">
-          <div className="skeleton h-3.5 w-28 rounded" />
-          <div className="skeleton h-2.5 w-20 rounded" />
-        </div>
+      <div className="shrink-0 w-8 h-8 rounded-xl bg-white/5 animate-pulse flex items-center justify-center text-base">
+        🔮
       </div>
-      <div className="skeleton h-24 w-full rounded-xl" />
-      <div className="skeleton h-32 w-full rounded-xl" />
+      <div className="flex-1 space-y-2.5 pt-1">
+        <div className="skeleton h-3.5 w-3/4 rounded" />
+        <div className="skeleton h-3.5 w-full rounded" />
+        <div className="skeleton h-3.5 w-5/6 rounded" />
+        <div className="skeleton h-3.5 w-2/3 rounded mt-4" />
+        <div className="skeleton h-3.5 w-full rounded" />
+      </div>
     </motion.div>
   );
+}
+
+/* ── Helper: extract readable content from a message ─────────── */
+function getMessageContent(msg: Message): string | CouncilResponse {
+  if (msg.role === 'user') return msg.content as string;
+  if (typeof msg.content === 'string') {
+    try {
+      return JSON.parse(msg.content) as CouncilResponse;
+    } catch {
+      return { answer: msg.content };
+    }
+  }
+  return msg.content as CouncilResponse;
 }
 
 /* ── ChatWindow principal ────────────────────────────────────── */
@@ -152,8 +169,6 @@ export function ChatWindow({
     }
   };
 
-  const charCount = input.length;
-
   return (
     <div className="flex flex-col h-full">
       {/* ── Barra superior ───────────────────────────────────── */}
@@ -167,45 +182,43 @@ export function ChatWindow({
           <span className="hidden sm:inline font-medium">Inicio</span>
         </button>
         <div className="flex-1" />
-        <div className="flex items-center gap-2.5 text-neutral-500 text-xs">
+        <div className="flex items-center gap-2 text-neutral-500 text-xs">
           <div className="w-6 h-6 rounded-lg bg-violet-900/30 border border-violet-500/15 flex items-center justify-center">
             <span className="text-sm">🔮</span>
           </div>
-          <span className="hidden sm:inline font-medium">Sage Council</span>
+          <span className="hidden sm:inline font-medium">El Consejo</span>
         </div>
       </div>
 
       {/* ── Mensajes ─────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-5 py-8 space-y-8">
+        <div className="max-w-2xl mx-auto px-5 py-8 space-y-6">
           {messages.length === 0 && !thinking ? (
             <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
-              className="text-center py-20 space-y-4"
+              className="text-center py-20 space-y-3"
             >
-              <div className="text-5xl mb-2">🔮</div>
-              <p className="text-neutral-400 text-sm font-medium">
-                Trae al Consejo una decision, un reto o una pregunta.
-              </p>
-              <p className="text-neutral-600 text-xs max-w-sm mx-auto leading-relaxed">
-                Recibiras la mejor respuesta, destilada de 12 pensadores distintos.
+              <div className="text-4xl mb-2">🔮</div>
+              <p className="text-neutral-400 text-sm">
+                Haz tu consulta al Consejo.
               </p>
             </motion.div>
           ) : (
             <>
-              {messages.map((msg) => (
-                <div key={msg.id}>
-                  {msg.role === 'user' ? (
-                    <UserBubble content={msg.content as string} />
-                  ) : (
-                    <CouncilBubble
-                      response={(msg.content as unknown) as CouncilResponse}
-                    />
-                  )}
-                </div>
-              ))}
+              {messages.map((msg) => {
+                const content = getMessageContent(msg);
+                return (
+                  <div key={msg.id}>
+                    {msg.role === 'user' ? (
+                      <UserBubble content={content as string} />
+                    ) : (
+                      <CouncilBubble response={content as CouncilResponse} />
+                    )}
+                  </div>
+                );
+              })}
               <AnimatePresence>
                 {thinking && (
                   <motion.div
@@ -248,41 +261,31 @@ export function ChatWindow({
         )}
       </AnimatePresence>
 
-      {/* ── Barra de entrada ──────────────────────────────────── */}
+      {/* ── Input ────────────────────────────────────────────── */}
       <div className="border-t border-white/[0.06] bg-[#0f0f0f]/80 backdrop-blur-md p-4">
         <form
           onSubmit={handleSubmit}
-          className="max-w-3xl mx-auto flex items-end gap-3 bg-white/[0.04] border border-white/[0.08] focus-within:border-sage-600/40 focus-within:bg-white/[0.06] rounded-2xl px-4 py-3 transition-all duration-200"
+          className="max-w-2xl mx-auto flex items-end gap-3 bg-white/[0.04] border border-white/[0.08] focus-within:border-violet-500/30 focus-within:bg-white/[0.06] rounded-2xl px-4 py-3 transition-all duration-200"
         >
           <textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Preguntale al Consejo lo que quieras..."
+            placeholder="Escribe tu consulta..."
             rows={1}
             className="flex-1 bg-transparent text-neutral-100 placeholder-neutral-600 text-sm resize-none outline-none leading-relaxed"
             disabled={thinking}
           />
-          <div className="flex items-center gap-2 shrink-0">
-            {charCount > 0 && (
-              <span className="text-[10px] text-neutral-600 tabular-nums">
-                {charCount}
-              </span>
-            )}
-            <motion.button
-              type="submit"
-              disabled={!input.trim() || thinking}
-              whileTap={{ scale: 0.9 }}
-              className="w-9 h-9 flex items-center justify-center bg-sage-600 hover:bg-sage-500 disabled:opacity-25 disabled:cursor-not-allowed text-white rounded-xl transition-colors"
-            >
-              <Send size={15} />
-            </motion.button>
-          </div>
+          <motion.button
+            type="submit"
+            disabled={!input.trim() || thinking}
+            whileTap={{ scale: 0.9 }}
+            className="w-9 h-9 flex items-center justify-center bg-violet-600 hover:bg-violet-500 disabled:opacity-25 disabled:cursor-not-allowed text-white rounded-xl transition-colors shrink-0"
+          >
+            <Send size={15} />
+          </motion.button>
         </form>
-        <p className="text-center text-[11px] text-neutral-700 mt-2.5">
-          El Consejo se nutre de videos e ideas reales de tus pensadores favoritos.
-        </p>
       </div>
     </div>
   );

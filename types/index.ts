@@ -41,7 +41,10 @@ export interface CouncilChoice {
 }
 
 export interface CouncilResponse {
-  choices: CouncilChoice[];
+  answer: string;
+  first_step?: string;
+  // Legacy fields kept for backwards compat
+  choices?: CouncilChoice[];
   council_note?: string;
   question?: string;
 }
