@@ -604,7 +604,7 @@ export default function CouncilBackground({ active=false }:{ active?:boolean }) 
 
     function updateAgents(){
       const g=G(); const zs=zones();
-      const {CCX,CCY,TR,SR}=g;
+      const {CCX,CCY,TR,SR,W16}=g;
       const isActive=activeRef.current;
       for(let i=0;i<agents.length;i++){
         const a=agents[i];
