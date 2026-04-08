@@ -9,16 +9,15 @@ const anthropic = new Anthropic({
 
 const MODEL = 'claude-opus-4-6';
 const TITLE_MODEL = 'claude-haiku-4-5-20251001';
+const THINKING_BUDGET = 10000;
 
-// Extended thinking: Claude razona internamente antes de responder
-const THINKING_BUDGET = 8000;
+// ─── Context builders ──────────────────────────────────────────────────────
 
-/** Fetch transcript chunks for all council members in parallel */
-async function buildCreatorContexts(userMessage: string) {
+async function buildCreatorContext(userMessage: string) {
   const contexts = await Promise.all(
     CREATORS.map(async (creator) => {
       try {
-        const chunks = await searchTranscriptChunks(creator.id, userMessage, 5);
+        const chunks = await searchTranscriptChunks(creator.id, userMessage, 4);
         return { creator, chunks };
       } catch {
         return { creator, chunks: [] };
@@ -28,83 +27,101 @@ async function buildCreatorContexts(userMessage: string) {
   return contexts;
 }
 
-/** Fetch framework context */
+async function buildIgnacioMindset(userMessage: string): Promise<string> {
+  // book-ideas = cómo piensa Ignacio. Siempre incluir si hay contenido.
+  const bookChunks = await searchTranscriptChunks('book-ideas', userMessage, 6).catch(() => []);
+  if (bookChunks.length === 0) return '';
+  return bookChunks.map((c) => c.chunk_text).join('\n').substring(0, 1800);
+}
+
 async function buildFrameworkContext(userMessage: string): Promise<string> {
   const sections: string[] = [];
-  for (const fw of FRAMEWORKS) {
+  const nonBookFrameworks = FRAMEWORKS.filter((fw) => fw.id !== 'book-ideas');
+  for (const fw of nonBookFrameworks) {
     try {
-      const chunks = await searchTranscriptChunks(fw.id, userMessage, 4);
+      const chunks = await searchTranscriptChunks(fw.id, userMessage, 3);
       if (chunks.length > 0) {
-        const text = chunks.map((c) => c.chunk_text).join(' ').substring(0, 900);
-        sections.push(`[${fw.name}] ${text}`);
+        sections.push(chunks.map((c) => c.chunk_text).join(' ').substring(0, 700));
       }
     } catch {
       // optional
     }
   }
-  return sections.length > 0 ? sections.join('\n\n') : '';
+  return sections.join('\n\n');
 }
 
-function formatCreatorContext(
-  creator: (typeof CREATORS)[number],
-  chunks: Array<{ chunk_text: string; video_title: string }>
+// ─── Council members as known identities ──────────────────────────────────
+
+function buildCouncilRoster(): string {
+  return CREATORS.map((c) => `• ${c.name} — ${c.philosophy}`).join('\n');
+}
+
+function buildTranscriptBlock(
+  contexts: Array<{ creator: (typeof CREATORS)[number]; chunks: Array<{ chunk_text: string; video_title: string }> }>
 ): string {
-  if (chunks.length === 0) return '';
-  const excerpts = chunks
-    .map((c) => c.chunk_text)
-    .join(' ')
-    .substring(0, 900);
-  return `[${creator.name}]: ${excerpts}`;
+  const lines = contexts
+    .filter(({ chunks }) => chunks.length > 0)
+    .map(({ creator, chunks }) => {
+      const text = chunks.map((c) => c.chunk_text).join(' ').substring(0, 800);
+      return `[${creator.name}]\n${text}`;
+    });
+  return lines.join('\n\n');
 }
 
-const COUNCIL_SYSTEM_PROMPT = `Eres el SAGE COUNCIL — doce mentes distintas que hablan con una sola voz después de llegar a consenso real. No eres un asistente. Eres el interlocutor más honesto e inteligente que Ignacio tiene.
+// ─── System prompt ─────────────────────────────────────────────────────────
 
-QUIÉN ES IGNACIO:
-Un individuo de alto rendimiento con fuerte pensamiento sistémico, mucha ambición, y una tendencia a sobreanalizar en lugar de ejecutar. Se frustra con respuestas genéricas. Lo que necesita es alguien que entienda exactamente qué está pasando en su situación específica y le hable con precisión quirúrgica.
+function buildSystemPrompt(councilRoster: string): string {
+  return `Eres el SAGE COUNCIL — la voz unificada de 12 mentes que deliberan en privado y hablan con una sola respuesta. Los miembros del consejo son:
 
-CÓMO RESPONDER:
-Antes de responder, diagnostica la pregunta real. A veces lo que Ignacio pregunta no es lo que necesita resolver. Identifica la tensión de fondo, el mecanismo que opera debajo de la superficie, y habla desde ahí.
+${councilRoster}
 
-Tu respuesta debe:
-- Demostrar que entendiste exactamente la situación específica de Ignacio — no una situación genérica similar
-- Explicar el mecanismo real: por qué funciona así, qué está generando lo que describe
-- Dar una posición clara y fundamentada — no opciones, no listas, no frameworks con nombre
-- Construir sobre el historial de conversación si existe — nunca repetir, siempre profundizar
-- Ser incómoda si la verdad lo requiere — no validar por validar
+CÓMO FUNCIONA EL CONSEJO:
+Cada miembro aporta su perspectiva basada en sus propios transcripts y enseñanzas. Internamente debaten. Donde hay tensión real entre perspectivas, el consejo la resuelve hacia la posición más honesta y útil para Ignacio específicamente — no hacia el consenso más cómodo. La respuesta final es UNA sola voz, no un resumen de opiniones.
 
-TIPO DE RESPUESTA SEGÚN EL MENSAJE:
-- Consulta nueva: diagnóstico → mecanismo → dirección clara
-- Debate: si Ignacio tiene razón, concédelo con argumento. Si no la tiene, explica por qué con lógica
-- Pide más desarrollo: ve más adentro del punto exacto, no repitas lo dicho
-- Pide acción concreta: operacionaliza con quién, qué, cuándo, dónde, cómo
+QUIÉN ES IGNACIO (crítico — nunca respondas sin esto en mente):
+Tienes acceso a sus ideas de libro — la forma en que estructura el pensamiento, los principios que ha construido, cómo conecta conceptos. Úsalo para hablarle exactamente en su lenguaje mental, no en el lenguaje genérico de autoayuda. Ignacio piensa en sistemas, odia las listas de opciones, y necesita que lo traten como alguien capaz de ejecutar cosas difíciles.
 
-TONO: Amigo muy inteligente que dice la verdad aunque incomode. Directo. Sin condescendencia. Sin clichés motivacionales. Sin frases vacías. Cada oración debe ganar su lugar.
+DOS REGLAS QUE NUNCA SE ROMPEN:
+1. ELIMINAR DECISIONES — nunca presentes múltiples caminos. El consejo ya deliberó. Da UNA posición, una sola dirección. No "puedes hacer X o Y". Solo: esto es lo que el consejo ve claro.
+2. TRADUCIR A ACCIÓN — toda respuesta termina en un paso concreto ejecutable en 24 horas. No un plan. No una reflexión. Un acto específico con suficiente detalle para que no haya ambigüedad sobre qué hacer.
 
-IDIOMA: Siempre en español. Siempre de tú.
+CÓMO CONSTRUIR LA RESPUESTA:
+— Primero: diagnostica qué está pasando realmente debajo de la pregunta. Lo que Ignacio pregunta a veces enmarca mal el problema real.
+— Segundo: explica el mecanismo — por qué funciona así, qué fuerza psicológica, sistémica o humana opera aquí.
+— Tercero: da la dirección del consejo. Fundamentada. Sin hedging. Como alguien que ya deliberó y llegó a una conclusión.
+— El tono es el de un amigo muy inteligente que te dice la verdad aunque incomode, no el de un coach que valida todo.
 
-LONGITUD: 4-6 párrafos sustanciales para consultas nuevas. Más corto en follow-ups, igual de denso.
+EN CONVERSACIONES CON HISTORIAL:
+Construye sobre lo ya dicho. Si Ignacio debate, responde al debate. Si pide más desarrollo, ve más adentro del mismo punto — no lo repitas con otras palabras.
 
-FORMATO DE SALIDA — escribe en prosa continua, sin encabezados visibles. Al terminar el cuerpo de la respuesta, en una nueva línea escribe exactamente esto:
-PRIMER_PASO: [una sola acción específica, física, ejecutable en las próximas 24 horas — no un plan, un acto]`;
+IDIOMA: Siempre español. Siempre de tú.
 
-/** Convert stored assistant content to readable text for history */
+LONGITUD: 4-6 párrafos densos para consultas nuevas. En follow-ups: más corto pero igual de preciso.
+
+FORMATO DE SALIDA — prosa continua sin encabezados. Al final de la respuesta, en línea nueva:
+PRIMER_PASO: [un solo acto, específico, con suficiente detalle para ejecutarlo hoy o mañana sin tener que pensar más]`;
+}
+
+// ─── History extraction ────────────────────────────────────────────────────
+
 function extractAnswerText(content: string): string {
-  // Handle new delimited format
   if (content.includes('PRIMER_PASO:')) {
     return content.split(/\nPRIMER_PASO:/)[0].trim();
   }
-  // Handle legacy JSON format
   try {
     const parsed = JSON.parse(content);
     if (parsed.answer) {
       const parts = [parsed.answer];
-      if (parsed.first_step) parts.push(`[Próximo paso recomendado: ${parsed.first_step}]`);
+      if (parsed.first_step) parts.push(`[Próximo paso: ${parsed.first_step}]`);
       return parts.join('\n\n');
     }
     if (parsed.choices && Array.isArray(parsed.choices)) {
-      return parsed.choices.map((c: { title?: string; perspective?: string; advice?: string }) =>
-        [c.title, c.perspective, c.advice].filter(Boolean).join('\n\n')
-      ).join('\n\n---\n\n').substring(0, 1200);
+      return parsed.choices
+        .map((c: { title?: string; perspective?: string; advice?: string }) =>
+          [c.title, c.perspective, c.advice].filter(Boolean).join('\n\n')
+        )
+        .join('\n\n---\n\n')
+        .substring(0, 1200);
     }
   } catch {
     // plain text
@@ -112,57 +129,66 @@ function extractAnswerText(content: string): string {
   return content;
 }
 
-/** Parse delimited response into answer + first_step */
 function parseResponse(rawText: string): CouncilResponse {
-  const primer = /\nPRIMER_PASO:\s*/;
-  const parts = rawText.split(primer);
-
+  const parts = rawText.split(/\nPRIMER_PASO:\s*/);
   if (parts.length >= 2) {
     return {
       answer: parts[0].trim(),
       first_step: parts[1].trim(),
     };
   }
-
-  // No delimiter found — treat all as answer
   return {
     answer: rawText.trim(),
-    first_step: 'Define el próximo movimiento concreto basado en la respuesta anterior y ejecútalo hoy.',
+    first_step: 'Ejecuta el movimiento más obvio que surgió de esta conversación. Hoy.',
   };
 }
+
+// ─── Main export ───────────────────────────────────────────────────────────
 
 export async function generateCouncilResponse(
   userMessage: string,
   chatHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
 ): Promise<CouncilResponse> {
-  const [creatorContexts, frameworkContext] = await Promise.all([
-    buildCreatorContexts(userMessage),
+
+  // Fetch all context in parallel
+  const [creatorContexts, ignacioMindset, frameworkContext] = await Promise.all([
+    buildCreatorContext(userMessage),
+    buildIgnacioMindset(userMessage),
     buildFrameworkContext(userMessage),
   ]);
 
-  const contextSections = creatorContexts
-    .map(({ creator, chunks }) => formatCreatorContext(creator, chunks))
-    .filter(Boolean);
+  const transcriptBlock = buildTranscriptBlock(creatorContexts);
+  const councilRoster = buildCouncilRoster();
+  const systemPrompt = buildSystemPrompt(councilRoster);
 
-  const contextBlock = contextSections.length > 0
-    ? `INFORMACIÓN DE REFERENCIA (usa para fundamentar — nunca cites explícitamente de dónde viene):\n\n${contextSections.join('\n\n')}`
-    : '';
+  // Build the user prompt with layered context
+  const parts: string[] = [];
 
-  const frameworkBlock = frameworkContext
-    ? `FRAMEWORKS RELEVANTES:\n\n${frameworkContext}`
-    : '';
+  if (ignacioMindset) {
+    parts.push(
+      `CÓMO PIENSA IGNACIO — sus propias ideas y principios (usa esto para hablarle en su lenguaje):\n${ignacioMindset}`
+    );
+  }
 
-  // Build clean history
+  if (transcriptBlock) {
+    parts.push(
+      `SABIDURÍA DE LOS MIEMBROS DEL CONSEJO — extraída de sus propios transcripts para esta consulta (no cites de dónde viene, intégrala como perspectiva):\n${transcriptBlock}`
+    );
+  }
+
+  if (frameworkContext) {
+    parts.push(`CONTEXTO ADICIONAL:\n${frameworkContext}`);
+  }
+
+  parts.push(`CONSULTA DE IGNACIO:\n"${userMessage}"`);
+
+  const userPrompt = parts.join('\n\n---\n\n');
+
+  // Clean history
   const recentHistory = chatHistory.slice(-10).map((m) => ({
     role: m.role as 'user' | 'assistant',
     content: m.role === 'assistant' ? extractAnswerText(m.content) : m.content,
   }));
-
-  // Build the user message with context
-  const contextParts = [contextBlock, frameworkBlock].filter(Boolean).join('\n\n');
-  const userPrompt = contextParts
-    ? `${contextParts}\n\n---\n\nIgnacio dice: "${userMessage}"`
-    : `Ignacio dice: "${userMessage}"`;
 
   let rawText = '';
   try {
@@ -173,14 +199,13 @@ export async function generateCouncilResponse(
         type: 'enabled',
         budget_tokens: THINKING_BUDGET,
       },
-      system: COUNCIL_SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: [
         ...recentHistory,
         { role: 'user', content: userPrompt },
       ],
     });
 
-    // Extract only text blocks — skip thinking blocks
     const textBlock = response.content.find((b) => b.type === 'text');
     rawText = textBlock && textBlock.type === 'text' ? textBlock.text : '';
   } catch (error) {
@@ -189,7 +214,6 @@ export async function generateCouncilResponse(
   }
 
   if (!rawText) return buildFallbackResponse();
-
   return parseResponse(rawText);
 }
 
@@ -215,7 +239,6 @@ export async function generateChatTitle(userMessage: string): Promise<string> {
         },
       ],
     });
-
     const block = response.content[0];
     return block.type === 'text' ? block.text.trim() : 'Nueva Consulta';
   } catch {
