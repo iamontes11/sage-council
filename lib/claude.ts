@@ -1,13 +1,14 @@
-import Groq from 'groq-sdk';
+import Anthropic from '@anthropic-ai/sdk';
 import { CREATORS, FRAMEWORKS } from './creators';
 import { searchTranscriptChunks } from './supabase';
 import type { CouncilResponse } from '@/types';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY!,
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
 });
 
-const MODEL = 'llama-3.3-70b-versatile';
+const MODEL = 'claude-opus-4-6';
+const TITLE_MODEL = 'claude-haiku-4-5-20251001';
 
 /** Fetch transcript chunks for all council members in parallel */
 async function buildCreatorContexts(userMessage: string) {
@@ -91,13 +92,11 @@ function extractAnswerText(content: string): string {
   try {
     const parsed = JSON.parse(content);
     if (parsed.answer) {
-      // Include first_step in history so the LLM knows what action was already recommended
       const parts = [parsed.answer];
       if (parsed.first_step) parts.push(`[Próximo paso recomendado: ${parsed.first_step}]`);
       return parts.join('\n\n');
     }
     if (parsed.choices && Array.isArray(parsed.choices)) {
-      // Legacy format: extract first choice perspective
       return parsed.choices.map((c: { title?: string; perspective?: string; advice?: string }) =>
         [c.title, c.perspective, c.advice].filter(Boolean).join('\n\n')
       ).join('\n\n---\n\n').substring(0, 1200);
@@ -131,6 +130,7 @@ export async function generateCouncilResponse(
     : '';
 
   // Build clean history — convert assistant JSON to readable text
+  // Anthropic API only accepts 'user' and 'assistant' roles
   const recentHistory = chatHistory.slice(-8).map((m) => ({
     role: m.role as 'user' | 'assistant',
     content: m.role === 'assistant' ? extractAnswerText(m.content) : m.content,
@@ -144,24 +144,25 @@ Pregunta de Ignacio: "${userMessage}"
 
 Responde con SOLO JSON válido.`;
 
-  let response;
+  let rawText = '';
   try {
-    response = await groq.chat.completions.create({
+    const response = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 3000,
-      temperature: 0.72,
+      system: COUNCIL_SYSTEM_PROMPT,
       messages: [
-        { role: 'system', content: COUNCIL_SYSTEM_PROMPT },
         ...recentHistory,
         { role: 'user', content: userPrompt },
       ],
     });
+
+    const block = response.content[0];
+    rawText = block.type === 'text' ? block.text : '';
   } catch (error) {
-    console.error('Groq API error:', error);
+    console.error('Anthropic API error:', error);
     return buildFallbackResponse();
   }
 
-  const rawText = response.choices[0]?.message?.content || '';
   const clean = rawText
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/i, '')
@@ -190,18 +191,19 @@ function buildFallbackResponse(): CouncilResponse {
 
 export async function generateChatTitle(userMessage: string): Promise<string> {
   try {
-    const response = await groq.chat.completions.create({
-      model: MODEL,
+    const response = await anthropic.messages.create({
+      model: TITLE_MODEL,
+      max_tokens: 20,
       messages: [
         {
           role: 'user',
           content: `Genera un título muy corto (3-5 palabras) en español para una conversación que empieza con: "${userMessage.slice(0, 200)}". Responde solo el título, sin comillas.`,
         },
       ],
-      max_tokens: 20,
-      temperature: 0.7,
     });
-    return response.choices[0]?.message?.content?.trim() || 'Nueva Consulta';
+
+    const block = response.content[0];
+    return block.type === 'text' ? block.text.trim() : 'Nueva Consulta';
   } catch {
     return 'Nueva Consulta';
   }
