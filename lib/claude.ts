@@ -7,9 +7,9 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 });
 
-const MODEL = 'claude-opus-4-6';
+// claude-sonnet-4-6 = más rápido y confiable. Usar opus si se quiere más profundidad (más lento).
+const MODEL = 'claude-sonnet-4-6';
 const TITLE_MODEL = 'claude-haiku-4-5-20251001';
-const THINKING_BUDGET = 10000;
 
 // ─── Context builders ──────────────────────────────────────────────────────
 
@@ -28,10 +28,13 @@ async function buildCreatorContext(userMessage: string) {
 }
 
 async function buildIgnacioMindset(userMessage: string): Promise<string> {
-  // book-ideas = cómo piensa Ignacio. Siempre incluir si hay contenido.
-  const bookChunks = await searchTranscriptChunks('book-ideas', userMessage, 6).catch(() => []);
-  if (bookChunks.length === 0) return '';
-  return bookChunks.map((c) => c.chunk_text).join('\n').substring(0, 1800);
+  try {
+    const bookChunks = await searchTranscriptChunks('book-ideas', userMessage, 6);
+    if (bookChunks.length === 0) return '';
+    return bookChunks.map((c) => c.chunk_text).join('\n').substring(0, 1800);
+  } catch {
+    return '';
+  }
 }
 
 async function buildFrameworkContext(userMessage: string): Promise<string> {
@@ -50,56 +53,56 @@ async function buildFrameworkContext(userMessage: string): Promise<string> {
   return sections.join('\n\n');
 }
 
-// ─── Council members as known identities ──────────────────────────────────
+function buildTranscriptBlock(
+  contexts: Array<{
+    creator: (typeof CREATORS)[number];
+    chunks: Array<{ chunk_text: string; video_title: string }>;
+  }>
+): string {
+  return contexts
+    .filter(({ chunks }) => chunks.length > 0)
+    .map(({ creator, chunks }) => {
+      const text = chunks.map((c) => c.chunk_text).join(' ').substring(0, 800);
+      return `[${creator.name}]\n${text}`;
+    })
+    .join('\n\n');
+}
 
 function buildCouncilRoster(): string {
   return CREATORS.map((c) => `• ${c.name} — ${c.philosophy}`).join('\n');
 }
 
-function buildTranscriptBlock(
-  contexts: Array<{ creator: (typeof CREATORS)[number]; chunks: Array<{ chunk_text: string; video_title: string }> }>
-): string {
-  const lines = contexts
-    .filter(({ chunks }) => chunks.length > 0)
-    .map(({ creator, chunks }) => {
-      const text = chunks.map((c) => c.chunk_text).join(' ').substring(0, 800);
-      return `[${creator.name}]\n${text}`;
-    });
-  return lines.join('\n\n');
-}
-
 // ─── System prompt ─────────────────────────────────────────────────────────
 
 function buildSystemPrompt(councilRoster: string): string {
-  return `Eres el SAGE COUNCIL — la voz unificada de 12 mentes que deliberan en privado y hablan con una sola respuesta. Los miembros del consejo son:
+  return `Eres el SAGE COUNCIL. Los 12 miembros del consejo son:
 
 ${councilRoster}
 
-CÓMO FUNCIONA EL CONSEJO:
-Cada miembro aporta su perspectiva basada en sus propios transcripts y enseñanzas. Internamente debaten. Donde hay tensión real entre perspectivas, el consejo la resuelve hacia la posición más honesta y útil para Ignacio específicamente — no hacia el consenso más cómodo. La respuesta final es UNA sola voz, no un resumen de opiniones.
+Cada uno aporta su perspectiva basada en sus propios transcripts. Deliberan internamente y hablan con UNA sola voz — la más honesta y útil para Ignacio específicamente.
 
-QUIÉN ES IGNACIO (crítico — nunca respondas sin esto en mente):
-Tienes acceso a sus ideas de libro — la forma en que estructura el pensamiento, los principios que ha construido, cómo conecta conceptos. Úsalo para hablarle exactamente en su lenguaje mental, no en el lenguaje genérico de autoayuda. Ignacio piensa en sistemas, odia las listas de opciones, y necesita que lo traten como alguien capaz de ejecutar cosas difíciles.
+QUIÉN ES IGNACIO:
+Tienes sus ideas de libro — la forma en que estructura el pensamiento, los principios que ha construido. Úsalos. Ignacio piensa en sistemas, detecta el bullshit al instante, y necesita que le hablen con precisión, no con coaching genérico.
 
-DOS REGLAS QUE NUNCA SE ROMPEN:
-1. ELIMINAR DECISIONES — nunca presentes múltiples caminos. El consejo ya deliberó. Da UNA posición, una sola dirección. No "puedes hacer X o Y". Solo: esto es lo que el consejo ve claro.
-2. TRADUCIR A ACCIÓN — toda respuesta termina en un paso concreto ejecutable en 24 horas. No un plan. No una reflexión. Un acto específico con suficiente detalle para que no haya ambigüedad sobre qué hacer.
+DOS REGLAS ABSOLUTAS QUE NUNCA SE ROMPEN:
+
+REGLA 1 — ELIMINAR DECISIONES:
+Nunca presentes múltiples caminos. El consejo ya deliberó. Solo hay UNA dirección, UNA posición. No "puedes hacer X o Y". No listas. No opciones. El consejo dice: esto.
+
+REGLA 2 — TRADUCIR A ACCIÓN CONCRETA:
+Toda respuesta termina en un solo acto ejecutable en las próximas 24 horas. No un plan. No una reflexión. Un movimiento específico con suficiente detalle para que no haya ambigüedad.
 
 CÓMO CONSTRUIR LA RESPUESTA:
-— Primero: diagnostica qué está pasando realmente debajo de la pregunta. Lo que Ignacio pregunta a veces enmarca mal el problema real.
-— Segundo: explica el mecanismo — por qué funciona así, qué fuerza psicológica, sistémica o humana opera aquí.
-— Tercero: da la dirección del consejo. Fundamentada. Sin hedging. Como alguien que ya deliberó y llegó a una conclusión.
-— El tono es el de un amigo muy inteligente que te dice la verdad aunque incomode, no el de un coach que valida todo.
+1. Diagnostica qué está pasando realmente debajo de la pregunta — el problema real, no el enunciado.
+2. Explica el mecanismo — por qué funciona así psicológica o sistémicamente.
+3. Da la posición del consejo: clara, fundamentada, sin hedging.
 
-EN CONVERSACIONES CON HISTORIAL:
-Construye sobre lo ya dicho. Si Ignacio debate, responde al debate. Si pide más desarrollo, ve más adentro del mismo punto — no lo repitas con otras palabras.
+TONO: Amigo muy inteligente que dice la verdad aunque incomode. Sin clichés motivacionales. Sin validación vacía. Cada oración debe ganar su lugar.
 
-IDIOMA: Siempre español. Siempre de tú.
+IDIOMA: Siempre español. Siempre de tú. 4-6 párrafos densos para consultas nuevas.
 
-LONGITUD: 4-6 párrafos densos para consultas nuevas. En follow-ups: más corto pero igual de preciso.
-
-FORMATO DE SALIDA — prosa continua sin encabezados. Al final de la respuesta, en línea nueva:
-PRIMER_PASO: [un solo acto, específico, con suficiente detalle para ejecutarlo hoy o mañana sin tener que pensar más]`;
+FORMATO: Prosa continua sin encabezados. Al terminar, en línea nueva:
+PRIMER_PASO: [acto único, específico, ejecutable hoy o mañana — con suficiente detalle para no tener que pensar más]`;
 }
 
 // ─── History extraction ────────────────────────────────────────────────────
@@ -150,7 +153,6 @@ export async function generateCouncilResponse(
   chatHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
 ): Promise<CouncilResponse> {
 
-  // Fetch all context in parallel
   const [creatorContexts, ignacioMindset, frameworkContext] = await Promise.all([
     buildCreatorContext(userMessage),
     buildIgnacioMindset(userMessage),
@@ -158,21 +160,20 @@ export async function generateCouncilResponse(
   ]);
 
   const transcriptBlock = buildTranscriptBlock(creatorContexts);
-  const councilRoster = buildCouncilRoster();
-  const systemPrompt = buildSystemPrompt(councilRoster);
+  const systemPrompt = buildSystemPrompt(buildCouncilRoster());
 
-  // Build the user prompt with layered context
+  // Build layered user prompt
   const parts: string[] = [];
 
   if (ignacioMindset) {
     parts.push(
-      `CÓMO PIENSA IGNACIO — sus propias ideas y principios (usa esto para hablarle en su lenguaje):\n${ignacioMindset}`
+      `CÓMO PIENSA IGNACIO — sus propios principios y forma de ver el mundo (habla en su lenguaje):\n${ignacioMindset}`
     );
   }
 
   if (transcriptBlock) {
     parts.push(
-      `SABIDURÍA DE LOS MIEMBROS DEL CONSEJO — extraída de sus propios transcripts para esta consulta (no cites de dónde viene, intégrala como perspectiva):\n${transcriptBlock}`
+      `SABIDURÍA DE LOS MIEMBROS DEL CONSEJO — de sus propios transcripts (no cites fuente, integra como perspectiva):\n${transcriptBlock}`
     );
   }
 
@@ -184,21 +185,15 @@ export async function generateCouncilResponse(
 
   const userPrompt = parts.join('\n\n---\n\n');
 
-  // Clean history
   const recentHistory = chatHistory.slice(-10).map((m) => ({
     role: m.role as 'user' | 'assistant',
     content: m.role === 'assistant' ? extractAnswerText(m.content) : m.content,
   }));
 
-  let rawText = '';
   try {
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 16000,
-      thinking: {
-        type: 'enabled',
-        budget_tokens: THINKING_BUDGET,
-      },
+      max_tokens: 4096,
       system: systemPrompt,
       messages: [
         ...recentHistory,
@@ -206,23 +201,27 @@ export async function generateCouncilResponse(
       ],
     });
 
-    const textBlock = response.content.find((b) => b.type === 'text');
-    rawText = textBlock && textBlock.type === 'text' ? textBlock.text : '';
+    const block = response.content.find((b) => b.type === 'text');
+    const rawText = block && block.type === 'text' ? block.text : '';
+
+    if (!rawText) {
+      console.error('Empty response from Anthropic API');
+      return buildFallbackResponse();
+    }
+
+    return parseResponse(rawText);
   } catch (error) {
-    console.error('Anthropic API error:', error);
+    // Log the real error so we can debug
+    console.error('Anthropic API error details:', JSON.stringify(error, null, 2));
     return buildFallbackResponse();
   }
-
-  if (!rawText) return buildFallbackResponse();
-  return parseResponse(rawText);
 }
 
 function buildFallbackResponse(): CouncilResponse {
   return {
     answer:
-      'El Consejo ve tu situación con claridad. La mayoría de las veces, la confusión no viene de falta de información sino de resistencia a actuar sobre lo que ya sabes. El primer movimiento siempre es el más importante — no porque sea perfecto, sino porque rompe la inercia.\n\nLo que necesitas no es más análisis. Necesitas ejecutar algo concreto hoy, observar qué pasa, y ajustar. La claridad llega con la acción, no antes.',
-    first_step:
-      'Identifica la UNA cosa que has estado evitando y hazla en las próximas 2 horas. No la planifiques — ejecútala.',
+      'Hubo un error conectando con el Consejo. Intenta de nuevo en un momento.',
+    first_step: 'Recarga la página e intenta tu consulta nuevamente.',
     choices: [],
   };
 }
