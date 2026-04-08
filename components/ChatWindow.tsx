@@ -25,7 +25,7 @@ function UserBubble({ content }: { content: string }) {
       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
       className="flex justify-end"
     >
-      <div className="max-w-[78%] bg-white/[0.07] border border-white/[0.09] text-neutral-100 rounded-2xl rounded-tr-sm px-5 py-3.5 text-sm leading-relaxed">
+      <div className="max-w-[78%] bg-[#1e1b2e]/90 backdrop-blur-sm border border-violet-500/20 text-neutral-100 rounded-2xl rounded-tr-sm px-5 py-3.5 text-sm leading-relaxed shadow-lg">
         {content}
       </div>
     </motion.div>
@@ -57,16 +57,16 @@ function CouncilBubble({ response }: { response: CouncilResponse }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 space-y-4 min-w-0">
-        {/* Answer paragraphs */}
-        <div className="space-y-3">
+      <div className="flex-1 min-w-0">
+        {/* Answer bubble */}
+        <div className="bg-[#13121a]/85 backdrop-blur-sm border border-white/[0.08] rounded-2xl rounded-tl-sm px-5 py-4 space-y-3 shadow-lg">
           {paragraphs.map((para, i) => (
             <motion.p
               key={i}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 + i * 0.06, duration: 0.3 }}
-              className="text-neutral-200 text-sm leading-relaxed"
+              className="text-neutral-200 text-sm leading-[1.75]"
             >
               {para}
             </motion.p>
@@ -79,7 +79,7 @@ function CouncilBubble({ response }: { response: CouncilResponse }) {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 + paragraphs.length * 0.06, duration: 0.3 }}
-            className="flex gap-3 p-3.5 rounded-xl bg-violet-950/30 border border-violet-500/15"
+            className="mt-3 flex gap-3 p-3.5 rounded-xl bg-[#1a1128]/80 backdrop-blur-sm border border-violet-500/20 shadow-md"
           >
             <Zap size={14} className="shrink-0 mt-0.5 text-violet-400" />
             <div>
@@ -172,7 +172,7 @@ export function ChatWindow({
   return (
     <div className="flex flex-col h-full">
       {/* ── Barra superior ───────────────────────────────────── */}
-      <div className="shrink-0 flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] bg-[#0f0f0f]/80 backdrop-blur-md">
+      <div className="shrink-0 flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] bg-[#0d0d0f]/90 backdrop-blur-xl">
         <button
           onClick={() => router.push('/chat')}
           title="Nueva consulta"
@@ -262,10 +262,10 @@ export function ChatWindow({
       </AnimatePresence>
 
       {/* ── Input ────────────────────────────────────────────── */}
-      <div className="border-t border-white/[0.06] bg-[#0f0f0f]/80 backdrop-blur-md p-4">
+      <div className="border-t border-white/[0.06] bg-[#0d0d0f]/90 backdrop-blur-xl p-4">
         <form
           onSubmit={handleSubmit}
-          className="max-w-2xl mx-auto flex items-end gap-3 bg-white/[0.04] border border-white/[0.08] focus-within:border-violet-500/30 focus-within:bg-white/[0.06] rounded-2xl px-4 py-3 transition-all duration-200"
+          className="max-w-2xl mx-auto flex items-end gap-3 bg-[#18181b]/80 backdrop-blur-sm border border-white/[0.10] focus-within:border-violet-500/35 rounded-2xl px-4 py-3 transition-all duration-200"
         >
           <textarea
             ref={textareaRef}
