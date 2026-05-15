@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, MessageSquare, Archive, Trash2, LogOut,
-  ChevronRight, Settings, X, Menu, Zap,
+  ChevronRight, Settings, X, Menu,
 } from 'lucide-react';
 import { toast } from './Toast';
 import type { Chat } from '@/types';
@@ -167,17 +167,10 @@ export function Sidebar({ user }: SidebarProps) {
             </div>
 
             {/* New Chat */}
-            <div className="p-3 space-y-2">
+            <div className="p-3">
               <button onClick={handleNewChat} className="btn btn-primary w-full gap-2 py-2.5 rounded-xl text-sm">
                 <Plus size={16} />
                 Nueva consulta
-              </button>
-              <button
-                onClick={() => router.push('/chat/adhd')}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-violet-900/30 hover:bg-violet-900/50 border border-violet-500/20 hover:border-violet-500/40 text-violet-300 transition-all duration-150"
-              >
-                <Zap size={14} />
-                ADHD Sequence Helper
               </button>
             </div>
 
