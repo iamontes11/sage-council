@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ADHD Sequence Helper',
+  title: 'Cowork',
   description: 'Guía de 7 pasos para ejecutar tareas sin parálisis',
 };
 
