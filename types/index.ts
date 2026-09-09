@@ -52,3 +52,38 @@ export interface CouncilResponse {
 export interface ChatWithLastMessage extends Chat {
   last_message?: string;
 }
+
+// ── El Oráculo — morning briefing ────────────────────────────────
+export interface OraculoItem {
+  time: string;
+  title: string;
+  detail: string;
+  isMain?: boolean;
+  needsDecision?: boolean;
+}
+
+export interface OraculoResult {
+  headline: string;
+  items: OraculoItem[];
+  pendingDecision?: string | null;
+  backgroundTasks?: string[];
+  pattern?: string | null;
+}
+
+export type OraculoStatus = 'waiting_personal' | 'waiting_professional' | 'ready';
+
+export interface OraculoDay {
+  id: string;
+  user_email: string;
+  brief_date: string;
+  status: OraculoStatus;
+  personal_brief: string | null;
+  personal_received_at: string | null;
+  professional_brief: string | null;
+  professional_input_type: 'text' | 'image' | null;
+  professional_received_at: string | null;
+  itinerary: OraculoResult | null;
+  html: string | null;
+  created_at: string;
+  updated_at: string;
+}

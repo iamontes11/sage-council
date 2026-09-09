@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, MessageSquare, Archive, Trash2, LogOut,
-  ChevronRight, Settings, X, Menu,
+  ChevronRight, Settings, X, Menu, Newspaper,
 } from 'lucide-react';
 import { toast } from './Toast';
 import type { Chat } from '@/types';
@@ -167,10 +167,21 @@ export function Sidebar({ user }: SidebarProps) {
             </div>
 
             {/* New Chat */}
-            <div className="p-3">
+            <div className="p-3 space-y-2">
               <button onClick={handleNewChat} className="btn btn-primary w-full gap-2 py-2.5 rounded-xl text-sm">
                 <Plus size={16} />
                 Nueva consulta
+              </button>
+              <button
+                onClick={() => router.push('/oraculo')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                  pathname === '/oraculo'
+                    ? 'bg-white/10 text-white shadow-sm'
+                    : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200'
+                }`}
+              >
+                <Newspaper size={15} />
+                El Oráculo
               </button>
             </div>
 

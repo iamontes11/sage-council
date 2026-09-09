@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Chat, Message } from '@/types';
+import { Chat, Message, OraculoDay, OraculoResult } from '@/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -158,4 +158,82 @@ export async function getTranscriptStats() {
     chunks: Number(row.chunk_count),
     videos: Number(row.video_count),
   }));
+}
+
+// ── El Oráculo — morning briefing ────────────────────────────────
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Today's oráculo row for this user, or null if nothing has been started yet. */
+export async function getTodayOraculo(userEmail: string): Promise<OraculoDay | null> {
+  const { data, error } = await supabaseAdmin
+    .from('oraculo_days')
+    .select()
+    .eq('user_email', userEmail)
+    .eq('brief_date', todayISO())
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Loads/replaces today's personal brief and puts the day in "waiting_professional". */
+export async function savePersonalBrief(userEmail: string, personalBrief: string): Promise<OraculoDay> {
+  const { data, error } = await supabaseAdmin
+    .from('oraculo_days')
+    .upsert(
+      {
+        user_email: userEmail,
+        brief_date: todayISO(),
+        personal_brief: personalBrief,
+        personal_received_at: new Date().toISOString(),
+        status: 'waiting_professional',
+      },
+      { onConflict: 'user_email,brief_date' },
+    )
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Saves the professional brief + generated result and marks the day "ready". */
+export async function saveOraculoResult(
+  userEmail: string,
+  professionalBrief: string,
+  professionalInputType: 'text' | 'image',
+  itinerary: OraculoResult,
+  html: string,
+): Promise<OraculoDay> {
+  const { data, error } = await supabaseAdmin
+    .from('oraculo_days')
+    .update({
+      professional_brief: professionalBrief,
+      professional_input_type: professionalInputType,
+      professional_received_at: new Date().toISOString(),
+      itinerary,
+      html,
+      status: 'ready',
+    })
+    .eq('user_email', userEmail)
+    .eq('brief_date', todayISO())
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Recent past days (most recent first, today excluded) used to detect patterns/trends. */
+export async function getRecentOraculoDays(userEmail: string, limit: number = 7): Promise<OraculoDay[]> {
+  const { data, error } = await supabaseAdmin
+    .from('oraculo_days')
+    .select()
+    .eq('user_email', userEmail)
+    .eq('status', 'ready')
+    .lt('brief_date', todayISO())
+    .order('brief_date', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
 }

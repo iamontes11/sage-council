@@ -122,3 +122,49 @@ create policy "Public read creators" on creators
 
 alter table transcript_chunks enable row level security;
 alter table creators           enable row level security;
+
+-- ================================================================
+-- EL ORÁCULO — Morning briefing pipeline
+-- One row per (user, day). Waits for the personal brief (from the
+-- Grok "periódico" in Drive/Notion), then the professional brief
+-- (calendar/CRM cut, pasted or screenshotted) triggers the cross
+-- analysis and the rendered "periódico matutino".
+-- ================================================================
+create table if not exists oraculo_days (
+  id                      uuid default uuid_generate_v4() primary key,
+  user_email              text not null,
+  brief_date              date not null default current_date,
+  status                  text not null default 'waiting_personal'
+                            check (status in ('waiting_personal', 'waiting_professional', 'ready')),
+  personal_brief          text,
+  personal_received_at    timestamptz,
+  professional_brief      text,
+  professional_input_type text check (professional_input_type in ('text', 'image')),
+  professional_received_at timestamptz,
+  itinerary               jsonb,          -- structured { headline, items[], pendingDecision, backgroundTasks[], pattern }
+  html                    text,           -- rendered newspaper HTML
+  created_at              timestamptz default now(),
+  updated_at              timestamptz default now(),
+  unique (user_email, brief_date)
+);
+
+create index if not exists idx_oraculo_days_user
+  on oraculo_days (user_email, brief_date desc);
+
+drop trigger if exists trg_update_oraculo_timestamp on oraculo_days;
+create or replace function update_oraculo_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger trg_update_oraculo_timestamp
+  before update on oraculo_days
+  for each row execute function update_oraculo_updated_at();
+
+alter table oraculo_days enable row level security;
+
+create policy "Users see own oraculo days" on oraculo_days
+  for all using (user_email = current_setting('request.jwt.claims', true)::json->>'email');
