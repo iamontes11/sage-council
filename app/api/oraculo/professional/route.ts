@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getTodayOraculo, getRecentOraculoDays, saveOraculoResult } from '@/lib/supabase';
+import { getTodayOraculo, getRecentOraculoDays, saveOraculoResult, getOraculoPngUrl } from '@/lib/supabase';
 import { generateMorningBrief, renderNewspaperHtml, extractProfessionalBriefFromImage } from '@/lib/oraculo';
+import { renderOraculoPng } from '@/lib/oraculoImage';
 
 // POST /api/oraculo/professional — the professional brief (calendar/CRM cut)
 // arrives as text or a screenshot. This is the trigger: as soon as it lands,
@@ -53,9 +54,11 @@ export async function POST(req: NextRequest) {
     const recentDays = await getRecentOraculoDays(userEmail, 7);
     const itinerary = await generateMorningBrief(day.personal_brief, professionalBrief, recentDays);
     const html = renderNewspaperHtml(day.brief_date, itinerary);
+    const png = await renderOraculoPng(day.brief_date, itinerary);
 
-    const updated = await saveOraculoResult(userEmail, professionalBrief, inputType, itinerary, html);
-    return NextResponse.json({ day: updated });
+    const updated = await saveOraculoResult(userEmail, professionalBrief, inputType, itinerary, html, png);
+    const pngUrl = updated.png_path ? await getOraculoPngUrl(updated.png_path) : null;
+    return NextResponse.json({ day: updated, pngUrl });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error desconocido';
     console.error('[POST /api/oraculo/professional] error:', msg);

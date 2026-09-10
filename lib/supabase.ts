@@ -198,14 +198,35 @@ export async function savePersonalBrief(userEmail: string, personalBrief: string
   return data;
 }
 
-/** Saves the professional brief + generated result and marks the day "ready". */
+/** Uploads the generated newspaper PNG to the private archive bucket. Returns its storage path. */
+export async function uploadOraculoPng(userEmail: string, dateISO: string, png: Buffer): Promise<string> {
+  const path = `${userEmail}/${dateISO}.png`;
+  const { error } = await supabaseAdmin.storage
+    .from('oraculo-archive')
+    .upload(path, png, { contentType: 'image/png', upsert: true });
+  if (error) throw error;
+  return path;
+}
+
+/** Short-lived signed URL for an archived PNG (bucket is private). */
+export async function getOraculoPngUrl(path: string, expiresInSeconds: number = 3600): Promise<string | null> {
+  const { data, error } = await supabaseAdmin.storage
+    .from('oraculo-archive')
+    .createSignedUrl(path, expiresInSeconds);
+  if (error) return null;
+  return data.signedUrl;
+}
+
+/** Saves the professional brief + generated result, archives the PNG, and marks the day "ready". */
 export async function saveOraculoResult(
   userEmail: string,
   professionalBrief: string,
   professionalInputType: 'text' | 'image',
   itinerary: OraculoResult,
   html: string,
+  png: Buffer,
 ): Promise<OraculoDay> {
+  const pngPath = await uploadOraculoPng(userEmail, todayISO(), png);
   const { data, error } = await supabaseAdmin
     .from('oraculo_days')
     .update({
@@ -214,6 +235,7 @@ export async function saveOraculoResult(
       professional_received_at: new Date().toISOString(),
       itinerary,
       html,
+      png_path: pngPath,
       status: 'ready',
     })
     .eq('user_email', userEmail)

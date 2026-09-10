@@ -179,7 +179,7 @@ const MESES = [
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ];
 
-function formatSpanishDate(dateISO: string): string {
+export function formatSpanishDate(dateISO: string): string {
   const d = new Date(`${dateISO}T12:00:00`);
   return `${DIAS[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
 }

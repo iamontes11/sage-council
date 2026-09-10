@@ -21,6 +21,7 @@ function fileToBase64(file: File): Promise<{ data: string; mimeType: string }> {
 export default function OraculoPage() {
   const [status, setStatus] = useState<OraculoStatus | 'loading'>('loading');
   const [day, setDay] = useState<OraculoDay | null>(null);
+  const [pngUrl, setPngUrl] = useState<string | null>(null);
   const [personalText, setPersonalText] = useState('');
   const [professionalText, setProfessionalText] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -32,6 +33,7 @@ export default function OraculoPage() {
       const data = await res.json();
       setStatus(data.status);
       setDay(data.day);
+      setPngUrl(data.pngUrl || null);
     } catch {
       toast('No se pudo cargar el estado de El Oráculo', 'error');
       setStatus('waiting_personal');
@@ -76,7 +78,8 @@ export default function OraculoPage() {
       if (!res.ok) throw new Error(data.error || 'Error');
       setDay(data.day);
       setStatus(data.day.status);
-      toast('El periódico matutino está listo', 'success');
+      setPngUrl(data.pngUrl || null);
+      toast('El periódico matutino está listo y archivado', 'success');
     } catch (err) {
       toast(err instanceof Error ? err.message : 'El Oráculo no pudo generar el periódico', 'error');
     } finally {
@@ -100,7 +103,7 @@ export default function OraculoPage() {
     );
   }
 
-  if (status === 'ready' && day?.html) {
+  if (status === 'ready' && (pngUrl || day?.html)) {
     return (
       <div className="h-full flex flex-col overflow-hidden bg-[#0f0f0f]">
         <div className="px-6 pt-14 pb-3 flex items-center justify-between shrink-0">
@@ -108,12 +111,22 @@ export default function OraculoPage() {
             <Newspaper size={16} />
             <span>El Oráculo — edición de hoy</span>
           </div>
+          {pngUrl && (
+            <span className="text-[11px] text-neutral-600">Archivado automáticamente</span>
+          )}
         </div>
-        <iframe
-          title="El Oráculo"
-          srcDoc={day.html}
-          className="flex-1 w-full border-0 bg-white"
-        />
+        {pngUrl ? (
+          <div className="flex-1 overflow-y-auto flex justify-center bg-[#1a1a1a] py-6">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={pngUrl} alt="El Oráculo — periódico de hoy" className="max-w-full h-auto shadow-2xl" />
+          </div>
+        ) : (
+          <iframe
+            title="El Oráculo"
+            srcDoc={day!.html!}
+            className="flex-1 w-full border-0 bg-white"
+          />
+        )}
       </div>
     );
   }
