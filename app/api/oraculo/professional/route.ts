@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getTodayOraculo, getRecentOraculoDays, saveOraculoResult, getOraculoPngUrl } from '@/lib/supabase';
+import { getTodayOraculo, getRecentOraculoDays, saveOraculoResult, getOraculoPngUrl, saveOraculoDriveLink } from '@/lib/supabase';
 import { generateMorningBrief, renderNewspaperHtml, extractProfessionalBriefFromImage } from '@/lib/oraculo';
 import { renderOraculoPng } from '@/lib/oraculoImage';
+import { uploadOraculoPngToDrive } from '@/lib/googleDrive';
 
 // POST /api/oraculo/professional — the professional brief (calendar/CRM cut)
 // arrives as text or a screenshot. This is the trigger: as soon as it lands,
@@ -58,7 +59,18 @@ export async function POST(req: NextRequest) {
 
     const updated = await saveOraculoResult(userEmail, professionalBrief, inputType, itinerary, html, png);
     const pngUrl = updated.png_path ? await getOraculoPngUrl(updated.png_path) : null;
-    return NextResponse.json({ day: updated, pngUrl });
+
+    // Best-effort — a missing/expired Drive grant should never break the periódico itself.
+    let driveLink: string | null = null;
+    try {
+      const drive = await uploadOraculoPngToDrive(userEmail, day.brief_date, png);
+      driveLink = drive?.webViewLink || null;
+      if (driveLink) await saveOraculoDriveLink(userEmail, driveLink);
+    } catch (err) {
+      console.error('[POST /api/oraculo/professional] Drive upload failed:', err);
+    }
+
+    return NextResponse.json({ day: { ...updated, png_drive_link: driveLink }, pngUrl, driveLink });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Error desconocido';
     console.error('[POST /api/oraculo/professional] error:', msg);

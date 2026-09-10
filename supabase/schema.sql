@@ -144,6 +144,7 @@ create table if not exists oraculo_days (
   itinerary               jsonb,          -- structured { headline, items[], pendingDecision, backgroundTasks[], pattern }
   html                    text,           -- rendered newspaper HTML (kept for debugging/fallback)
   png_path                text,           -- path inside the 'oraculo-archive' storage bucket; signed URLs are generated on read
+  png_drive_link          text,           -- webViewLink of the copy archived to the user's own Drive (Periódico/YYYY-MM/), if granted
   created_at              timestamptz default now(),
   updated_at              timestamptz default now(),
   unique (user_email, brief_date)
@@ -176,3 +177,16 @@ create policy "Users see own oraculo days" on oraculo_days
 insert into storage.buckets (id, name, public)
 values ('oraculo-archive', 'oraculo-archive', false)
 on conflict (id) do nothing;
+
+-- ── Google OAuth refresh tokens ──────────────────────────────────
+-- One row per user — lets the server upload to the user's own Google
+-- Drive (Periódico/YYYY-MM/) unattended, without the user present.
+-- Service-role only; never exposed to the client.
+create table if not exists google_oauth_tokens (
+  user_email     text primary key,
+  refresh_token  text not null,
+  updated_at     timestamptz default now()
+);
+
+alter table google_oauth_tokens enable row level security;
+-- No policies — only supabaseAdmin (service role) may touch this table.

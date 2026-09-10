@@ -111,9 +111,19 @@ export default function OraculoPage() {
             <Newspaper size={16} />
             <span>El Oráculo — edición de hoy</span>
           </div>
-          {pngUrl && (
-            <span className="text-[11px] text-neutral-600">Archivado automáticamente</span>
-          )}
+          <div className="flex items-center gap-3">
+            {pngUrl && <span className="text-[11px] text-neutral-600">Archivado automáticamente</span>}
+            {day?.png_drive_link && (
+              <a
+                href={day.png_drive_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] text-sage-400 hover:text-sage-300 underline underline-offset-2"
+              >
+                Ver en Drive
+              </a>
+            )}
+          </div>
         </div>
         {pngUrl ? (
           <div className="flex-1 overflow-y-auto flex justify-center bg-[#1a1a1a] py-6">

@@ -246,6 +246,38 @@ export async function saveOraculoResult(
   return data;
 }
 
+/** Persists (or refreshes) the user's Google OAuth refresh token, used for unattended Drive uploads. */
+export async function saveGoogleRefreshToken(userEmail: string, refreshToken: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('google_oauth_tokens')
+    .upsert(
+      { user_email: userEmail, refresh_token: refreshToken, updated_at: new Date().toISOString() },
+      { onConflict: 'user_email' },
+    );
+  if (error) throw error;
+}
+
+/** The user's stored Google refresh token, or null if they haven't granted Drive access yet. */
+export async function getGoogleRefreshToken(userEmail: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from('google_oauth_tokens')
+    .select('refresh_token')
+    .eq('user_email', userEmail)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data.refresh_token;
+}
+
+/** Records the Drive link for today's archived PNG, once the (best-effort) upload succeeds. */
+export async function saveOraculoDriveLink(userEmail: string, driveLink: string): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('oraculo_days')
+    .update({ png_drive_link: driveLink })
+    .eq('user_email', userEmail)
+    .eq('brief_date', todayISO());
+  if (error) throw error;
+}
+
 /** Recent past days (most recent first, today excluded) used to detect patterns/trends. */
 export async function getRecentOraculoDays(userEmail: string, limit: number = 7): Promise<OraculoDay[]> {
   const { data, error } = await supabaseAdmin
