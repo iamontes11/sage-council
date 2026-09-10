@@ -84,8 +84,8 @@ export interface OraculoDay {
   professional_received_at: string | null;
   itinerary: OraculoResult | null;
   html: string | null;
-  png_path: string | null;
-  png_drive_link: string | null;
+  pdf_path: string | null;
+  pdf_drive_link: string | null;
   created_at: string;
   updated_at: string;
 }

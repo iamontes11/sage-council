@@ -143,8 +143,8 @@ create table if not exists oraculo_days (
   professional_received_at timestamptz,
   itinerary               jsonb,          -- structured { headline, items[], pendingDecision, backgroundTasks[], pattern }
   html                    text,           -- rendered newspaper HTML (kept for debugging/fallback)
-  png_path                text,           -- path inside the 'oraculo-archive' storage bucket; signed URLs are generated on read
-  png_drive_link          text,           -- webViewLink of the copy archived to the user's own Drive (Periódico/YYYY-MM/), if granted
+  pdf_path                text,           -- path inside the 'oraculo-archive' storage bucket; signed URLs are generated on read
+  pdf_drive_link          text,           -- webViewLink of the copy archived to the user's own Drive (Periódico/YYYY-MM/), if granted
   created_at              timestamptz default now(),
   updated_at              timestamptz default now(),
   unique (user_email, brief_date)
@@ -171,7 +171,7 @@ alter table oraculo_days enable row level security;
 create policy "Users see own oraculo days" on oraculo_days
   for all using (user_email = current_setting('request.jwt.claims', true)::json->>'email');
 
--- Private storage bucket for the archived PNGs. The server (service-role
+-- Private storage bucket for the archived PDFs. The server (service-role
 -- key) is the only writer/reader — the app hands out short-lived signed
 -- URLs, nothing is public.
 insert into storage.buckets (id, name, public)

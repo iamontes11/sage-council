@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getTodayOraculo, getOraculoPngUrl } from '@/lib/supabase';
+import { getTodayOraculo, getOraculoPdfUrl } from '@/lib/supabase';
 
 // GET /api/oraculo — today's status for the current user
 export async function GET() {
@@ -14,6 +14,6 @@ export async function GET() {
   if (!day) {
     return NextResponse.json({ status: 'waiting_personal', day: null });
   }
-  const pngUrl = day.png_path ? await getOraculoPngUrl(day.png_path) : null;
-  return NextResponse.json({ status: day.status, day, pngUrl });
+  const pdfUrl = day.pdf_path ? await getOraculoPdfUrl(day.pdf_path) : null;
+  return NextResponse.json({ status: day.status, day, pdfUrl });
 }

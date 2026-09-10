@@ -9,7 +9,7 @@ function monthFolderName(dateISO: string): string {
 }
 
 function fileName(dateISO: string): string {
-  return `${dateISO}.png`;
+  return `${dateISO}.pdf`;
 }
 
 async function getDriveClient(userEmail: string) {
@@ -58,15 +58,15 @@ async function findFile(drive: Drive, name: string, parentId: string): Promise<s
 }
 
 /**
- * Archives today's periódico PNG to the user's own Drive, under
- * "Periódico/YYYY-MM/YYYY-MM-DD.png" — creating folders as needed.
+ * Archives today's periódico PDF to the user's own Drive, under
+ * "Periódico/YYYY-MM/YYYY-MM-DD.pdf" — creating folders as needed.
  * Returns null (never throws) if the user hasn't granted Drive access yet,
  * so a missing OAuth grant never breaks the main generation flow.
  */
-export async function uploadOraculoPngToDrive(
+export async function uploadOraculoPdfToDrive(
   userEmail: string,
   dateISO: string,
-  png: Buffer,
+  pdf: Buffer,
 ): Promise<{ fileId: string; webViewLink: string } | null> {
   const drive = await getDriveClient(userEmail);
   if (!drive) return null;
@@ -75,7 +75,7 @@ export async function uploadOraculoPngToDrive(
   const monthId = await findOrCreateFolder(drive, monthFolderName(dateISO), rootId);
   const name = fileName(dateISO);
 
-  const media = { mimeType: 'image/png', body: bufferToStream(png) };
+  const media = { mimeType: 'application/pdf', body: bufferToStream(pdf) };
   const existingId = await findFile(drive, name, monthId);
 
   const fileId = existingId

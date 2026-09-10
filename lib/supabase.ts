@@ -198,18 +198,18 @@ export async function savePersonalBrief(userEmail: string, personalBrief: string
   return data;
 }
 
-/** Uploads the generated newspaper PNG to the private archive bucket. Returns its storage path. */
-export async function uploadOraculoPng(userEmail: string, dateISO: string, png: Buffer): Promise<string> {
-  const path = `${userEmail}/${dateISO}.png`;
+/** Uploads the generated newspaper PDF to the private archive bucket. Returns its storage path. */
+export async function uploadOraculoPdf(userEmail: string, dateISO: string, pdf: Buffer): Promise<string> {
+  const path = `${userEmail}/${dateISO}.pdf`;
   const { error } = await supabaseAdmin.storage
     .from('oraculo-archive')
-    .upload(path, png, { contentType: 'image/png', upsert: true });
+    .upload(path, pdf, { contentType: 'application/pdf', upsert: true });
   if (error) throw error;
   return path;
 }
 
-/** Short-lived signed URL for an archived PNG (bucket is private). */
-export async function getOraculoPngUrl(path: string, expiresInSeconds: number = 3600): Promise<string | null> {
+/** Short-lived signed URL for an archived PDF (bucket is private). */
+export async function getOraculoPdfUrl(path: string, expiresInSeconds: number = 3600): Promise<string | null> {
   const { data, error } = await supabaseAdmin.storage
     .from('oraculo-archive')
     .createSignedUrl(path, expiresInSeconds);
@@ -217,16 +217,16 @@ export async function getOraculoPngUrl(path: string, expiresInSeconds: number = 
   return data.signedUrl;
 }
 
-/** Saves the professional brief + generated result, archives the PNG, and marks the day "ready". */
+/** Saves the professional brief + generated result, archives the PDF, and marks the day "ready". */
 export async function saveOraculoResult(
   userEmail: string,
   professionalBrief: string,
   professionalInputType: 'text' | 'image',
   itinerary: OraculoResult,
   html: string,
-  png: Buffer,
+  pdf: Buffer,
 ): Promise<OraculoDay> {
-  const pngPath = await uploadOraculoPng(userEmail, todayISO(), png);
+  const pdfPath = await uploadOraculoPdf(userEmail, todayISO(), pdf);
   const { data, error } = await supabaseAdmin
     .from('oraculo_days')
     .update({
@@ -235,7 +235,7 @@ export async function saveOraculoResult(
       professional_received_at: new Date().toISOString(),
       itinerary,
       html,
-      png_path: pngPath,
+      pdf_path: pdfPath,
       status: 'ready',
     })
     .eq('user_email', userEmail)
@@ -272,7 +272,7 @@ export async function getGoogleRefreshToken(userEmail: string): Promise<string |
 export async function saveOraculoDriveLink(userEmail: string, driveLink: string): Promise<void> {
   const { error } = await supabaseAdmin
     .from('oraculo_days')
-    .update({ png_drive_link: driveLink })
+    .update({ pdf_drive_link: driveLink })
     .eq('user_email', userEmail)
     .eq('brief_date', todayISO());
   if (error) throw error;
