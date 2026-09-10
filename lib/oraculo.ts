@@ -190,9 +190,6 @@ function esc(s: string): string {
 
 export function renderNewspaperHtml(dateISO: string, result: OraculoResult): string {
   const dateLabel = formatSpanishDate(dateISO);
-  const mainItem = result.items.find((i) => i.isMain) || result.items[0];
-  const restItems = result.items.filter((i) => i !== mainItem);
-
   const itemBlock = (item: (typeof result.items)[number], main: boolean) => `
     <article class="note ${main ? 'note--main' : ''} ${item.needsDecision ? 'note--decision' : ''}">
       <div class="note__time">${esc(item.time)}</div>
@@ -370,8 +367,7 @@ export function renderNewspaperHtml(dateISO: string, result: OraculoResult): str
     <div class="layout">
       <main>
         <div class="section-label">Itinerario del día</div>
-        ${mainItem ? itemBlock(mainItem, true) : ''}
-        ${restItems.map((i) => itemBlock(i, false)).join('')}
+        ${result.items.map((item, i) => itemBlock(item, !!item.isMain || (i === 0 && !result.items.some((it) => it.isMain)))).join('')}
       </main>
       <aside>
         ${backgroundSection}
